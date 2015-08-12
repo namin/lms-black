@@ -10,26 +10,38 @@ object eval {
     override def toString = "S(\""+sym+"\")"
   }
   case object N extends Value
-  case class P(car: Value, cdr: Value) extends Value
+  case class _P(car_key: Int, cdr_key: Int) extends Value
+  object P {
+    def apply(car: Value, cdr: Value) = _P(addCell(car), addCell(cdr))
+    def unapply(v: Value): Option[(Value, Value)] = v match {
+      case _P(a, d) => Some(cells(a), cells(d))
+      case _ => None
+    }
+  }
   case class Prim(p: String) extends Value {
     override def toString = "Prim(\""+p+"\")"
   }
   case class Clo(param: Value, body: Value, env: Env) extends Value
-  case class Evalfun(key: String) extends Value {
-    override def toString = "Evalfun(\""+key+"\")"
-  }
+  case class Evalfun(key: Int) extends Value
   case class Code[R[_]](c: R[Value]) extends Value
 
+  var cells = Map[Int, Value]()
+  def addCell(v: Value): Int = {
+    val key = cells.size
+    cells += (key -> v)
+    key
+  }
   abstract class Fun[W[_]:Ops] extends Serializable {
     def fun[R[_]:Ops]: ((W[Value], Cont[R])) => R[Value]
   }
-  var funs = Map[String, Fun[NoRep]]()
-  def addFun(f: Fun[NoRep]): String = {
-    val key = "f"+funs.size
+  var funs = Map[Int, Fun[NoRep]]()
+  def addFun(f: Fun[NoRep]): Int = {
+    val key = funs.size
     funs += (key -> f)
     key
   }
   def reset() {
+    cells = cells.empty
     funs = funs.empty
   }
   def evalfun(f: Fun[NoRep]) = Evalfun(addFun(f))
@@ -129,7 +141,6 @@ object eval {
             }
           }
           val r = new EvalDslDriver with Program
-          println(r.code)
           r.precompile
           cont(lift(evalfun(r.f)))
         } else {
@@ -171,8 +182,11 @@ object eval {
   def init_env = P(P(S("base_eval"), evalfun(base_eval_fun)), N)
 
   def top_eval[R[_]:Ops](exp: Value): R[Value] = {
-    reset()
-    base_eval[R](exp, init_env, x => x)
+    try {
+      base_eval[R](exp, init_env, x => x)
+    } finally {
+      reset()
+    }
   }
 }
 
@@ -212,8 +226,11 @@ trait EvalDslGen extends ScalaGenFunctions with ScalaGenTupleOps with ScalaGenIf
   import IR._
 
   override def quote(x: Exp[Any]) : String = x match {
-    case Const(P(a, d)) => "P("+quote(Const(a))+", "+quote(Const(d))+")"
-    case Const(Code(c)) => quote(c.asInstanceOf[Rep[Any]])
+    case Const(P(a, b)) => "P("+quote(Const(a))+", "+quote(Const(b))+")"
+    case Const(Code(c)) => c match {
+      case Def(Field(x, s)) => quote(x)+"."+s
+      case _ => quote(c.asInstanceOf[Rep[Any]])
+    }
     case Const(Clo(param, body, env)) =>  "Clo(\""+quote(Const(param))+"\", "+quote(Const(body))+", "+quote(Const(env))+")"
     case _ => super.quote(x)
   }
@@ -275,6 +292,7 @@ trait EvalDslImpl extends EvalDslExp { q =>
 }
 
 abstract class EvalDslDriver extends EvalDsl with EvalDslImpl with CompileScala {
+  dumpGeneratedCode = true
   lazy val f = compile(snippet).asInstanceOf[Fun[NoRep]]
   def precompile: Unit = { print("// "); f }
   def precompileSilently: Unit = utils.devnull(f)
