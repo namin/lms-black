@@ -225,8 +225,15 @@ trait EvalDslGen extends ScalaGenFunctions with ScalaGenTupleOps with ScalaGenIf
   val IR: EvalDslExp
   import IR._
 
+  def hasCode(v: Value): Boolean = v match {
+    case Code(c) => true
+    case P(a, b) => hasCode(a) || hasCode(b)
+    case Clo(a, b, c) => hasCode(a) || hasCode(b) || hasCode(c)
+    case _ => false
+  }
   override def quote(x: Exp[Any]) : String = x match {
-    case Const(P(a, b)) => "P("+quote(Const(a))+", "+quote(Const(b))+")"
+    case Const(P(a, b)) if hasCode(a) || hasCode(b) =>
+      "P("+quote(Const(a))+", "+quote(Const(b))+")"
     case Const(Code(c)) => c match {
       case Def(Field(x, s)) => quote(x)+"."+s
       case _ => quote(c.asInstanceOf[Rep[Any]])
