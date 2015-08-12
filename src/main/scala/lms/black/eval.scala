@@ -47,6 +47,7 @@ object eval {
     case ("-", P(I(a), P(I(b), N))) => I(a-b)
     case ("car", P(v, N)) => car(v)
     case ("cdr", P(v, N)) => cdr(v)
+    case ("cons", P(a, P(d, N))) => cons(a, d)
   }
 
   trait Ops[R[_]] {
@@ -96,6 +97,12 @@ object eval {
     }
   }
 
+  def base_eval_fun: Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops] = { (vc: (Value, Cont[R])) =>
+      val P(exp, env) = vc._1
+      base_eval[R](exp, env, vc._2)
+    }
+  }
   def base_eval[R[_]:Ops](exp: Value, env: Env, cont: Cont[R]): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     exp match {
@@ -142,6 +149,12 @@ object eval {
             base_eval[R](thenp, env, cont),
             base_eval[R](elsep, env, cont))
         })
+      case P(k@S("hack"), _) =>
+        env_get(env, k) match {
+          case Evalfun(key) =>
+            val f = funs(key).fun[R]
+            f(P(exp, env), cont)
+        }
       case P(fun, args) => base_eval[R](fun, env, { v =>
         base_evlist[R](args, env, { vs =>
           base_apply[R](v, vs, env, cont)
@@ -155,7 +168,7 @@ object eval {
     case P(P(k, v), r) => if (k==key) v else env_get(r, key)
     case _ => throw new Error("unbound variable "+key+" in "+env)
   }
-  def init_env = N
+  def init_env = P(P(S("base_eval"), evalfun(base_eval_fun)), N)
 
   def top_eval[R[_]:Ops](exp: Value): R[Value] = {
     reset()

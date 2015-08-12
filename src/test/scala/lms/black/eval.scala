@@ -60,4 +60,32 @@ class TestEvaluator extends TestSuite {
     assertResult(I(33)){
       top_eval[NoRep](A(A(Y(true), List(A(sumf(true), List(A(Y(true), List(fib(true))))))), List(I(7))))}
   }
+
+  test ("hack") {
+    assertResult(I(0)){
+      top_eval[NoRep](A(L(false, "hack", A(S("hack"), List(I(0), A(Prim("cdr"), List(I(0)))))),
+        List(L(true, "e",
+          A(S("base_eval"),
+            List(A(Prim("cons"),
+              List(A(Prim("car"), List(A(Prim("cdr"), List(A(Prim("car"), List(S("e"))))))),
+                A(Prim("cdr"), List(S("e")))))))))))
+    }
+  }
+
+
+  test ("hack compiled") {
+    assertResult(I(0)){
+      top_eval[NoRep](A(L(false, "hack",
+        A(L(true, "n",
+          A(S("hack"), List(S("n"), A(Prim("cdr"), List(S("n")))))),
+          List(I(0)))),
+        List(L(true, "e",
+          A(S("base_eval"),
+            List(A(Prim("cons"),
+              List(A(Prim("car"), List(A(Prim("cdr"), List(A(Prim("car"), List(S("e"))))))),
+                A(Prim("cdr"), List(S("e")))))))))))
+
+    }
+  }
+
 }
