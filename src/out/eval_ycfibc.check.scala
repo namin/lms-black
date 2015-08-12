@@ -16,7 +16,7 @@ class Snippet extends Fun[NoRep] with (((Value, Cont[NoRep])) => Value) {
         val x9 = x6(x8)
         x9: R[Value]
       }
-      val x11 = base_apply[R](x5, List(x5), Map(("fun" -> Code[R](x1)), ("F" -> Code[R](x5))), x7)
+      val x11 = base_apply[R](x5, List(x5), Map(("fun" -> x1), ("F" -> x5)), x7)
       x11: R[Value]
     }
     val x13 = evalfun(new Fun[NoRep] { def fun[R[_]:Ops] = x3.asInstanceOf[((Value, Cont[R])) => R[Value]]})
@@ -30,10 +30,10 @@ class Snippet extends Fun[NoRep] with (((Value, Cont[NoRep])) => Value) {
           x26: R[Value]
         }
         val x22 = {x23: (R[Value]) =>
-          val x28 = base_apply[R](x23, List(x20), Map(("fun" -> Code[R](x1)), ("F" -> Code[R](x16)), ("x" -> Code[R](x20))), x24)
+          val x28 = base_apply[R](x23, List(x20), Map(("fun" -> x1), ("F" -> x16), ("x" -> x20)), x24)
           x28: R[Value]
         }
-        val x30 = base_apply[R](x16, List(x16), Map(("fun" -> Code[R](x1)), ("F" -> Code[R](x16)), ("x" -> Code[R](x20))), x22)
+        val x30 = base_apply[R](x16, List(x16), Map(("fun" -> x1), ("F" -> x16), ("x" -> x20)), x22)
         x30: R[Value]
       }
       val x32 = evalfun(new Fun[NoRep] { def fun[R[_]:Ops] = x18.asInstanceOf[((Value, Cont[R])) => R[Value]]})
@@ -42,7 +42,7 @@ class Snippet extends Fun[NoRep] with (((Value, Cont[NoRep])) => Value) {
         val x35 = x17(x34)
         x35: R[Value]
       }
-      val x37 = base_apply[R](x1, List(x32), Map(("fun" -> Code[R](x1)), ("F" -> Code[R](x16))), x33)
+      val x37 = base_apply[R](x1, List(x32), Map(("fun" -> x1), ("F" -> x16)), x33)
       x37: R[Value]
     }
     val x39 = evalfun(new Fun[NoRep] { def fun[R[_]:Ops] = x14.asInstanceOf[((Value, Cont[R])) => R[Value]]})
@@ -51,7 +51,7 @@ class Snippet extends Fun[NoRep] with (((Value, Cont[NoRep])) => Value) {
       val x42 = x2(x41)
       x42: R[Value]
     }
-    val x44 = base_apply[R](x13, List(x39), Map(("fun" -> Code[R](x1))), x40)
+    val x44 = base_apply[R](x13, List(x39), Map(("fun" -> x1)), x40)
     x44
   }
 }
@@ -79,18 +79,18 @@ class Snippet extends Fun[NoRep] with (((Value, Cont[NoRep])) => Value) {
       }
       val x14 = {x15: (R[Value]) =>
         val x18 = {x19: (R[Value]) =>
-          val x24 = base_apply[R](P("+"), List(x15, x19), Map(("fib" -> Code[R](x1)), ("n" -> Code[R](x5))), x20)
+          val x24 = base_apply[R](P("+"), List(x15, x19), Map(("fib" -> x1), ("n" -> x5)), x20)
           x24: R[Value]
         }
         val x16 = {x17: (R[Value]) =>
-          val x26 = base_apply[R](x1, List(x17), Map(("fib" -> Code[R](x1)), ("n" -> Code[R](x5))), x18)
+          val x26 = base_apply[R](x1, List(x17), Map(("fib" -> x1), ("n" -> x5)), x18)
           x26: R[Value]
         }
-        val x28 = base_apply[R](P("-"), List(x5, I(2)), Map(("fib" -> Code[R](x1)), ("n" -> Code[R](x5))), x16)
+        val x28 = base_apply[R](P("-"), List(x5, I(2)), Map(("fib" -> x1), ("n" -> x5)), x16)
         x28: R[Value]
       }
       val x12 = {x13: (R[Value]) =>
-        val x30 = base_apply[R](x1, List(x13), Map(("fib" -> Code[R](x1)), ("n" -> Code[R](x5))), x14)
+        val x30 = base_apply[R](x1, List(x13), Map(("fib" -> x1), ("n" -> x5)), x14)
         x30: R[Value]
       }
       val x7 = {x8: (R[Value]) =>
@@ -99,12 +99,12 @@ class Snippet extends Fun[NoRep] with (((Value, Cont[NoRep])) => Value) {
           val x10 = x6(x5)
           x10
         } else {
-          val x32 = base_apply[R](P("-"), List(x5, I(1)), Map(("fib" -> Code[R](x1)), ("n" -> Code[R](x5))), x12)
+          val x32 = base_apply[R](P("-"), List(x5, I(1)), Map(("fib" -> x1), ("n" -> x5)), x12)
           x32
         }
         x34: R[Value]
       }
-      val x36 = base_apply[R](P("<"), List(x5, I(2)), Map(("fib" -> Code[R](x1)), ("n" -> Code[R](x5))), x7)
+      val x36 = base_apply[R](P("<"), List(x5, I(2)), Map(("fib" -> x1), ("n" -> x5)), x7)
       x36: R[Value]
     }
     val x38 = evalfun(new Fun[NoRep] { def fun[R[_]:Ops] = x3.asInstanceOf[((Value, Cont[R])) => R[Value]]})

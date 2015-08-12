@@ -171,7 +171,7 @@ trait EvalDslGen extends ScalaGenFunctions with ScalaGenTupleOps with ScalaGenIf
     "Map("+(for ((k,v) <- env) yield ("(\""+k+"\" -> "+quote(Const(v))+")")).mkString(", ")+")"
 
   override def quote(x: Exp[Any]) : String = x match {
-    case Const(Code(c)) => "Code[R]("+quote(c.asInstanceOf[Rep[Any]])+")"
+    case Const(Code(c)) => quote(c.asInstanceOf[Rep[Any]])
     case Const(Clo(param, body, env)) =>  "Clo(\""+param+"\", "+body+", "+env_quote(env)+")"
     case _ => super.quote(x)
   }
