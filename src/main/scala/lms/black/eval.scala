@@ -24,8 +24,11 @@ object eval {
   }
   case class Code[R[_]](c: R[Value]) extends Value
 
-  var funs = Map[String, Value => Value]()
-  def addFun(f: Value => Value): String = {
+  abstract class Fun[W[_]:Ops] extends Serializable {
+    def fun[R[_]:Ops]: ((W[Value], Cont[R])) => R[Value]
+  }
+  var funs = Map[String, Fun[NoRep]]()
+  def addFun(f: Fun[NoRep]): String = {
     val key = "f"+funs.size
     funs += (key -> f)
     key
@@ -33,7 +36,7 @@ object eval {
   def reset() {
     funs = funs.empty
   }
-  def evalfun(f: Value => Value) = Evalfun(addFun(f))
+  def evalfun(f: Fun[NoRep]) = Evalfun(addFun(f))
 
   def apply_primitive(p: String, args: List[Value]): Value = (p, args) match {
     case ("<", List(I(a), I(b))) => B(a < b)
@@ -42,33 +45,36 @@ object eval {
   }
 
   trait Ops[R[_]] {
-    def lift(v: Value): R[Value]
-    def base_apply(fun: R[Value], args: List[R[Value]], env: Env, cont: Cont[R]): R[Value]
+    implicit def lift(v: Value): R[Value]
+    def app(fun: R[Value], args: List[R[Value]], env: Env, cont: Cont[R]): R[Value]
     def isTrue(v: R[Value]): R[Boolean]
     def ifThenElse[A:Manifest](cond: R[Boolean], thenp: => R[A], elsep: => R[A]): R[A]
-    def makeFun(f: R[Value] => R[Value]): R[Value]
+    def makeFun(f: Fun[R]): R[Value]
     def inRep: Boolean
   }
 
   type NoRep[A] = A
   implicit object OpsNoRep extends Ops[NoRep] {
     def lift(v: Value) = v
-    def base_apply(fun: Value, args: List[Value], env: Env, cont: Cont[NoRep]) =
-      base_apply_norep(fun, args, env, cont)
+    def app(fun: Value, args: List[Value], env: Env, cont: Cont[NoRep]) =
+      fun match {
+        case Clo(param, body, cenv) =>
+          base_eval[NoRep](body, cenv + (param -> args(0)), cont)
+        case Evalfun(key) =>
+          val f = funs(key).fun[NoRep]
+          f(args(0), cont)
+        case P(p) =>
+          cont(apply_primitive(p, args))
+      }
     def isTrue(v: Value) = B(false)!=v
     def ifThenElse[A:Manifest](cond: Boolean, thenp: => A, elsep: => A): A = if (cond) thenp else elsep
-    def makeFun(f: Value => Value) = evalfun(f)
+    def makeFun(f: Fun[NoRep]) = evalfun(f)
     def inRep = false
   }
 
-  def base_apply_norep(fun: Value, args: List[Value], env: Env, cont: Cont[NoRep]) = fun match {
-    case Clo(param, body, cenv) =>
-      base_eval[NoRep](body, cenv + (param -> args(0)), cont)
-    case Evalfun(key) =>
-      val f = funs(key)
-      cont(f(args(0)))
-    case P(p) =>
-      cont(apply_primitive(p, args))
+  def base_apply[R[_]:Ops](fun: R[Value], args: List[R[Value]], env: Env, cont: Cont[R]) = {
+    val o = implicitly[Ops[R]]
+    o.app(fun, args, env, cont)
   }
 
   def base_evlist[R[_]:Ops](exps: List[Term], env: Env, cont: List[R[Value]] => R[Value]): R[Value] = exps match {
@@ -100,21 +106,23 @@ object eval {
           cont(lift(Clo(param, body, env)))
         } else if (!inRep) {
           trait Program extends EvalDsl {
-            def snippet(arg: Rep[Value]): Rep[Value] =
-              base_eval[Rep](body, env+(param -> Code(arg)), x => x)(OpsRep)
+            def snippet(v: Rep[(Value, Value => Value)]): Rep[Value] = {
+              base_eval[Rep](body, env+(param -> Code(v._1)), x => (v._2(x)))(OpsRep)
+            }
           }
           val r = new EvalDslDriver with Program
           println(r.code)
           r.precompile
-          val f = arg => r.eval(arg)
-          cont(lift(evalfun(f)))
+          cont(lift(evalfun(r.f)))
         } else {
-          val f = makeFun(arg => base_eval[R](body, env+(param -> Code(arg)), x => x))
+          val f = makeFun(new Fun[R] {
+            def fun[RF[_]:Ops] = (v: (R[Value], Cont[RF])) => base_eval[RF](body, env+(param -> Code(v._1)), v._2)
+          })
           cont(f)
         }
       case A(fun, args) => base_eval[R](fun, env, { v =>
         base_evlist[R](args, env, { vs =>
-          base_apply(v, vs, env, cont)
+          base_apply[R](v, vs, env, cont)
         })
       })
       case If(cond, thenp, elsep) => base_eval[R](cond, env, { vc =>
@@ -129,28 +137,33 @@ object eval {
 import eval._
 import scala.lms.common._
 
-trait EvalDsl extends Functions with IfThenElse with Equal with UncheckedOps {
+trait EvalDsl extends Functions with TupleOps with IfThenElse with Equal with UncheckedOps {
   def base_apply_rep(f: Rep[Value], args: List[Rep[Value]], env: Env, cont: Cont[Rep]): Rep[Value]
   implicit object OpsRep extends scala.Serializable with Ops[Rep] {
     def lift(v: Value) = unit(v)
-    def base_apply(f: Rep[Value], args: List[Rep[Value]], env: Env, cont: Cont[Rep]) =
+    def app(f: Rep[Value], args: List[Rep[Value]], env: Env, cont: Cont[Rep]) =
       base_apply_rep(f, args, env, cont)
     def isTrue(v: Rep[Value]): Rep[Boolean] = unit(B(false))!=v
     def ifThenElse[A:Manifest](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A] = if (cond) thenp else elsep
-    def makeFun(f: Rep[Value] => Rep[Value]) = unchecked("evalfun(", fun(f), ")")
+    def makeFun(f: Fun[Rep]) = {
+      val fn = f.fun[Rep]
+      unchecked("evalfun(new Fun[NoRep] { def fun[R[_]:Ops] = ",
+        fun{(v: Rep[(Value, Value => Value)]) => fn(v._1, x => v._2(x))},".asInstanceOf[((Value, Cont[R])) => R[Value]]",
+      "})")
+    }
     def inRep = true
   }
 
-  def snippet(x: Rep[Value]): Rep[Value]
+  def snippet(v: Rep[(Value, Value => Value)]): Rep[Value]
 }
 
-trait EvalDslExp extends EvalDsl with EffectExp with FunctionsRecursiveExp with IfThenElseExp with EqualExp with UncheckedOpsExp {
+trait EvalDslExp extends EvalDsl with EffectExp with FunctionsRecursiveExp with TupleOpsExp with IfThenElseExp with EqualExp with UncheckedOpsExp {
   case class BaseApplyRep(f: Rep[Value], args: List[Rep[Value]], env: Env, cont: Rep[Cont[NoRep]]) extends Def[Value]
   def base_apply_rep(f: Rep[Value], args: List[Rep[Value]], env: Env, cont: Cont[Rep]): Rep[Value] =
     reflectEffect(BaseApplyRep(f, args, env, fun(cont)))
 }
 
-trait EvalDslGen extends ScalaGenFunctions with ScalaGenIfThenElse with ScalaGenEqual with ScalaGenUncheckedOps {
+trait EvalDslGen extends ScalaGenFunctions with ScalaGenTupleOps with ScalaGenIfThenElse with ScalaGenEqual with ScalaGenUncheckedOps {
   val IR: EvalDslExp
   import IR._
 
@@ -158,13 +171,13 @@ trait EvalDslGen extends ScalaGenFunctions with ScalaGenIfThenElse with ScalaGen
     "Map("+(for ((k,v) <- env) yield ("(\""+k+"\" -> "+quote(Const(v))+")")).mkString(", ")+")"
 
   override def quote(x: Exp[Any]) : String = x match {
-    case Const(Code(c)) => quote(c.asInstanceOf[Rep[Value]])
+    case Const(Code(c)) => "Code[R]("+quote(c.asInstanceOf[Rep[Any]])+")"
     case Const(Clo(param, body, env)) =>  "Clo(\""+param+"\", "+body+", "+env_quote(env)+")"
     case _ => super.quote(x)
   }
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case BaseApplyRep(f, args, env, cont) =>
-      emitValDef(sym, "base_apply_norep("+quote(f)+", List("+args.map(quote).mkString(", ")+"), "+env_quote(env)+", "+quote(cont)+")")
+      emitValDef(sym, "base_apply[R]("+quote(f)+", List("+args.map(quote).mkString(", ")+"), "+env_quote(env)+", "+quote(cont)+")")
     case _ => super.emitNode(sym, rhs)
   }
 }
@@ -174,23 +187,59 @@ trait EvalDslImpl extends EvalDslExp { q =>
     val IR: q.type = q
 
     override def remap[A](m: Manifest[A]): String = {
-      if (m.toString.endsWith("$Value")) "Value"
+      val s = m.toString
+      if (s=="scala.Tuple2[scala.lms.black.eval$Value, scala.Function1[scala.lms.black.eval$Value, scala.lms.black.eval$Value]]") "(Value, Cont[R])"
+      else if (s=="scala.Function1[scala.lms.black.eval$Value, scala.lms.black.eval$Value]") "Cont[R]"
+      else if (s=="scala.lms.black.eval$Value") "R[Value]"
       else super.remap(m)
     }
 
-    override def emitSource[A : Manifest](args: List[Sym[_]], body: Block[A], className: String, stream: java.io.PrintWriter): List[(Sym[Any], Any)] = {
+    override def emitFileHeader() {
+      stream.println("import language.higherKinds")
       stream.println("import scala.lms.black.eval._")
-      super.emitSource(args, body, className, stream)
     }
 
+    override def emitSource[A : Manifest](args: List[Sym[_]], body: Block[A], className: String, out: java.io.PrintWriter) = {
+      val sA = remap(manifest[A])
+
+      val staticData = getFreeDataBlock(body)
+
+      withStream(out) {
+        stream.println("/*****************************************\n"+
+                       "  Emitting Generated Code                  \n"+
+                       "*******************************************/")
+        emitFileHeader()
+
+        stream.println("class "+className+(if (staticData.isEmpty) "" else "("+staticData.map(p=>"p"+quote(p._1)+":"+p._1.tp).mkString(",")+")")+" extends Fun[NoRep] with (((Value, Cont[NoRep])) => Value) {")
+
+        stream.println("def apply(v: (Value, Cont[NoRep])): Value = v._2(v._1)")
+        stream.println("def fun[R[_]:Ops] = { v => fun[R]((v._1, v._2))  }")
+        stream.println("def fun[R[_]:Ops]("+args.map(a => quote(a) + ":" + remap(a.tp)).mkString(", ")+"): "+sA+" = {")
+        stream.println("val o = implicitly[Ops[R]]; import o._")
+
+        emitBlock(body)
+        stream.println(quote(getBlockResult(body)))
+
+        stream.println("}")
+
+        stream.println("}")
+        stream.println("/*****************************************\n"+
+                       "  End of Generated Code                  \n"+
+                       "*******************************************/")
+      }
+    staticData
+    }
   }
 }
 
 abstract class EvalDslDriver extends EvalDsl with EvalDslImpl with CompileScala {
-  lazy val f = compile(snippet)
+  lazy val f = compile(snippet).asInstanceOf[Fun[NoRep]]
   def precompile: Unit = { print("// "); f }
   def precompileSilently: Unit = utils.devnull(f)
-  def eval(x: Value): Value = f(x)
+  def eval[R[_]:Ops](v: Value, cont: Cont[R]): R[Value] = {
+    val fn = f.fun[R]
+    fn(v, cont)
+  }
   lazy val code: String = {
     val source = new java.io.StringWriter()
     codegen.emitSource(snippet, "Snippet", new java.io.PrintWriter(source))

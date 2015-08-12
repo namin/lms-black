@@ -1,44 +1,55 @@
-import scala.lms.black.eval._
 /*****************************************
 Emitting Generated Code
 *******************************************/
-class Snippet extends ((Value)=>(Value)) {
-  def apply(x0:Value): Value = {
-    val x14 = {x15: (Value) =>
-      x15: Value
-    }
-    val x1 = {x2: (Value) =>
-      val x8 = {x9: (Value) =>
-        val x12 = {x13: (Value) =>
-          val x16 = base_apply_norep(P("+"), List(x9, x13), Map(("fib" -> x0), ("n" -> x2)), x14)
-          x16: Value
-        }
-        val x10 = {x11: (Value) =>
-          val x18 = base_apply_norep(x0, List(x11), Map(("fib" -> x0), ("n" -> x2)), x12)
-          x18: Value
-        }
-        val x20 = base_apply_norep(P("-"), List(x2, I(2)), Map(("fib" -> x0), ("n" -> x2)), x10)
-        x20: Value
+import language.higherKinds
+import scala.lms.black.eval._
+class Snippet extends Fun[NoRep] with (((Value, Cont[NoRep])) => Value) {
+  def apply(v: (Value, Cont[NoRep])): Value = v._2(v._1)
+  def fun[R[_]:Ops] = { v => fun[R]((v._1, v._2))  }
+  def fun[R[_]:Ops](x0:(Value, Cont[R])): R[Value] = {
+    val o = implicitly[Ops[R]]; import o._
+    val x1 = x0._1
+    val x3 = {x4: ((Value, Cont[R])) =>
+      val x5 = x4._1
+      val x6 = x4._2
+      val x20 = {x21: (R[Value]) =>
+        val x22 = x6(x21)
+        x22: R[Value]
       }
-      val x6 = {x7: (Value) =>
-        val x22 = base_apply_norep(x0, List(x7), Map(("fib" -> x0), ("n" -> x2)), x8)
-        x22: Value
+      val x14 = {x15: (R[Value]) =>
+        val x18 = {x19: (R[Value]) =>
+          val x24 = base_apply[R](P("+"), List(x15, x19), Map(("fib" -> Code[R](x1)), ("n" -> Code[R](x5))), x20)
+          x24: R[Value]
+        }
+        val x16 = {x17: (R[Value]) =>
+          val x26 = base_apply[R](x1, List(x17), Map(("fib" -> Code[R](x1)), ("n" -> Code[R](x5))), x18)
+          x26: R[Value]
+        }
+        val x28 = base_apply[R](P("-"), List(x5, I(2)), Map(("fib" -> Code[R](x1)), ("n" -> Code[R](x5))), x16)
+        x28: R[Value]
       }
-      val x3 = {x4: (Value) =>
-        val x5 = B(false) != x4
-        val x26 = if (x5) {
-          x2
+      val x12 = {x13: (R[Value]) =>
+        val x30 = base_apply[R](x1, List(x13), Map(("fib" -> Code[R](x1)), ("n" -> Code[R](x5))), x14)
+        x30: R[Value]
+      }
+      val x7 = {x8: (R[Value]) =>
+        val x9 = B(false) != x8
+        val x34 = if (x9) {
+          val x10 = x6(x5)
+          x10
         } else {
-          val x24 = base_apply_norep(P("-"), List(x2, I(1)), Map(("fib" -> x0), ("n" -> x2)), x6)
-          x24
+          val x32 = base_apply[R](P("-"), List(x5, I(1)), Map(("fib" -> Code[R](x1)), ("n" -> Code[R](x5))), x12)
+          x32
         }
-        x26: Value
+        x34: R[Value]
       }
-      val x28 = base_apply_norep(P("<"), List(x2, I(2)), Map(("fib" -> x0), ("n" -> x2)), x3)
-      x28: Value
+      val x36 = base_apply[R](P("<"), List(x5, I(2)), Map(("fib" -> Code[R](x1)), ("n" -> Code[R](x5))), x7)
+      x36: R[Value]
     }
-    val x30 = evalfun(x1)
-    x30
+    val x38 = evalfun(new Fun[NoRep] { def fun[R[_]:Ops] = x3.asInstanceOf[((Value, Cont[R])) => R[Value]]})
+    val x2 = x0._2
+    val x39 = x2(x38)
+    x39
   }
 }
 /*****************************************
