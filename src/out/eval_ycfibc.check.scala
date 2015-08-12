@@ -1,119 +1,134 @@
-/*****************************************
+// /*****************************************
 Emitting Generated Code
 *******************************************/
 import language.higherKinds
 import scala.lms.black.eval._
-class Snippet extends Fun[NoRep] with (((Value, Cont[NoRep])) => Value) {
+class staged$0 extends Fun[NoRep] with (((Value, Cont[NoRep])) => Value) {
   def apply(v: (Value, Cont[NoRep])): Value = v._2(v._1)
   def fun[R[_]:Ops] = { v => fun[R]((v._1, v._2))  }
   def fun[R[_]:Ops](x0:(Value, Cont[R])): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
-    val x1 = x0._1
     val x3 = {x4: ((Value, Cont[R])) =>
       val x5 = x4._1
+      val x7 = makePair(x5, N)
       val x6 = x4._2
-      val x7 = {x8: (R[Value]) =>
-        val x9 = x6(x8)
-        x9: R[Value]
+      val x8 = {x9: (R[Value]) =>
+        val x10 = x6(x9)
+        x10: R[Value]
       }
-      val x11 = base_apply[R](x5, List(x5), Map(("fun" -> x1), ("F" -> x5)), x7)
-      x11: R[Value]
+      val x12 = base_apply[R](x5, x7, P(P(S("F"), x4._1), P(P(S("fun"), x0._1), _P(118,119))), x8)
+      x12: R[Value]
     }
-    val x13 = evalfun(new Fun[NoRep] { def fun[R[_]:Ops] = x3.asInstanceOf[((Value, Cont[R])) => R[Value]]})
-    val x14 = {x15: ((Value, Cont[R])) =>
-      val x16 = x15._1
-      val x18 = {x19: ((Value, Cont[R])) =>
-        val x20 = x19._1
-        val x21 = x19._2
+    val x14 = evalfun(new Fun[NoRep] { def fun[R[_]:Ops] = x3.asInstanceOf[((Value, Cont[R])) => R[Value]]})
+    val x1 = x0._1
+    val x15 = {x16: ((Value, Cont[R])) =>
+      val x17 = x16._1
+      val x19 = {x20: ((Value, Cont[R])) =>
+        val x23 = makePair(x17, N)
+        val x21 = x20._1
+        val x22 = x20._2
+        val x27 = {x28: (R[Value]) =>
+          val x29 = x22(x28)
+          x29: R[Value]
+        }
         val x24 = {x25: (R[Value]) =>
-          val x26 = x21(x25)
-          x26: R[Value]
+          val x26 = makePair(x21, N)
+          val x31 = base_apply[R](x25, x26, P(P(S("x"), x20._1), P(P(S("F"), x16._1), P(P(S("fun"), x0._1), _P(118,119)))), x27)
+          x31: R[Value]
         }
-        val x22 = {x23: (R[Value]) =>
-          val x28 = base_apply[R](x23, List(x20), Map(("fun" -> x1), ("F" -> x16), ("x" -> x20)), x24)
-          x28: R[Value]
-        }
-        val x30 = base_apply[R](x16, List(x16), Map(("fun" -> x1), ("F" -> x16), ("x" -> x20)), x22)
-        x30: R[Value]
+        val x33 = base_apply[R](x17, x23, P(P(S("x"), x20._1), P(P(S("F"), x16._1), P(P(S("fun"), x0._1), _P(118,119)))), x24)
+        x33: R[Value]
       }
-      val x32 = evalfun(new Fun[NoRep] { def fun[R[_]:Ops] = x18.asInstanceOf[((Value, Cont[R])) => R[Value]]})
-      val x17 = x15._2
-      val x33 = {x34: (R[Value]) =>
-        val x35 = x17(x34)
-        x35: R[Value]
+      val x35 = evalfun(new Fun[NoRep] { def fun[R[_]:Ops] = x19.asInstanceOf[((Value, Cont[R])) => R[Value]]})
+      val x36 = makePair(x35, N)
+      val x18 = x16._2
+      val x37 = {x38: (R[Value]) =>
+        val x39 = x18(x38)
+        x39: R[Value]
       }
-      val x37 = base_apply[R](x1, List(x32), Map(("fun" -> x1), ("F" -> x16)), x33)
-      x37: R[Value]
+      val x41 = base_apply[R](x1, x36, P(P(S("F"), x16._1), P(P(S("fun"), x0._1), _P(118,119))), x37)
+      x41: R[Value]
     }
-    val x39 = evalfun(new Fun[NoRep] { def fun[R[_]:Ops] = x14.asInstanceOf[((Value, Cont[R])) => R[Value]]})
+    val x43 = evalfun(new Fun[NoRep] { def fun[R[_]:Ops] = x15.asInstanceOf[((Value, Cont[R])) => R[Value]]})
+    val x44 = makePair(x43, N)
     val x2 = x0._2
-    val x40 = {x41: (R[Value]) =>
-      val x42 = x2(x41)
-      x42: R[Value]
+    val x45 = {x46: (R[Value]) =>
+      val x47 = x2(x46)
+      x47: R[Value]
     }
-    val x44 = base_apply[R](x13, List(x39), Map(("fun" -> x1)), x40)
-    x44
+    val x49 = base_apply[R](x14, x44, P(P(S("fun"), x0._1), _P(118,119)), x45)
+    x49
   }
 }
 /*****************************************
 End of Generated Code
 *******************************************/
-// compilation: ok
-/*****************************************
+compilation: ok
+// /*****************************************
 Emitting Generated Code
 *******************************************/
 import language.higherKinds
 import scala.lms.black.eval._
-class Snippet extends Fun[NoRep] with (((Value, Cont[NoRep])) => Value) {
+class staged$0 extends Fun[NoRep] with (((Value, Cont[NoRep])) => Value) {
   def apply(v: (Value, Cont[NoRep])): Value = v._2(v._1)
   def fun[R[_]:Ops] = { v => fun[R]((v._1, v._2))  }
   def fun[R[_]:Ops](x0:(Value, Cont[R])): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     val x1 = x0._1
     val x3 = {x4: ((Value, Cont[R])) =>
+      val x7 = makePair(I(2), N)
       val x5 = x4._1
+      val x8 = makePair(x5, x7)
       val x6 = x4._2
-      val x20 = {x21: (R[Value]) =>
-        val x22 = x6(x21)
-        x22: R[Value]
+      val x30 = {x31: (R[Value]) =>
+        val x32 = x6(x31)
+        x32: R[Value]
       }
-      val x14 = {x15: (R[Value]) =>
-        val x18 = {x19: (R[Value]) =>
-          val x24 = base_apply[R](P("+"), List(x15, x19), Map(("fib" -> x1), ("n" -> x5)), x20)
-          x24: R[Value]
+      val x19 = {x20: (R[Value]) =>
+        val x21 = makePair(I(2), N)
+        val x22 = makePair(x5, x21)
+        val x26 = {x27: (R[Value]) =>
+          val x28 = makePair(x27, N)
+          val x29 = makePair(x20, x28)
+          val x34 = base_apply[R](Prim("+"), x29, P(P(S("n"), x4._1), P(P(S("fib"), x0._1), _P(118,119))), x30)
+          x34: R[Value]
         }
-        val x16 = {x17: (R[Value]) =>
-          val x26 = base_apply[R](x1, List(x17), Map(("fib" -> x1), ("n" -> x5)), x18)
-          x26: R[Value]
+        val x23 = {x24: (R[Value]) =>
+          val x25 = makePair(x24, N)
+          val x36 = base_apply[R](x1, x25, P(P(S("n"), x4._1), P(P(S("fib"), x0._1), _P(118,119))), x26)
+          x36: R[Value]
         }
-        val x28 = base_apply[R](P("-"), List(x5, I(2)), Map(("fib" -> x1), ("n" -> x5)), x16)
-        x28: R[Value]
+        val x38 = base_apply[R](Prim("-"), x22, P(P(S("n"), x4._1), P(P(S("fib"), x0._1), _P(118,119))), x23)
+        x38: R[Value]
       }
-      val x12 = {x13: (R[Value]) =>
-        val x30 = base_apply[R](x1, List(x13), Map(("fib" -> x1), ("n" -> x5)), x14)
-        x30: R[Value]
+      val x16 = {x17: (R[Value]) =>
+        val x18 = makePair(x17, N)
+        val x40 = base_apply[R](x1, x18, P(P(S("n"), x4._1), P(P(S("fib"), x0._1), _P(118,119))), x19)
+        x40: R[Value]
       }
-      val x7 = {x8: (R[Value]) =>
-        val x9 = B(false) != x8
-        val x34 = if (x9) {
-          val x10 = x6(x5)
-          x10
+      val x9 = {x10: (R[Value]) =>
+        val x11 = B(false) != x10
+        val x44 = if (x11) {
+          val x12 = x6(x5)
+          x12
         } else {
-          val x32 = base_apply[R](P("-"), List(x5, I(1)), Map(("fib" -> x1), ("n" -> x5)), x12)
-          x32
+          val x14 = makePair(I(1), N)
+          val x15 = makePair(x5, x14)
+          val x42 = base_apply[R](Prim("-"), x15, P(P(S("n"), x4._1), P(P(S("fib"), x0._1), _P(118,119))), x16)
+          x42
         }
-        x34: R[Value]
+        x44: R[Value]
       }
-      val x36 = base_apply[R](P("<"), List(x5, I(2)), Map(("fib" -> x1), ("n" -> x5)), x7)
-      x36: R[Value]
+      val x46 = base_apply[R](Prim("<"), x8, P(P(S("n"), x4._1), P(P(S("fib"), x0._1), _P(118,119))), x9)
+      x46: R[Value]
     }
-    val x38 = evalfun(new Fun[NoRep] { def fun[R[_]:Ops] = x3.asInstanceOf[((Value, Cont[R])) => R[Value]]})
+    val x48 = evalfun(new Fun[NoRep] { def fun[R[_]:Ops] = x3.asInstanceOf[((Value, Cont[R])) => R[Value]]})
     val x2 = x0._2
-    val x39 = x2(x38)
-    x39
+    val x49 = x2(x48)
+    x49
   }
 }
 /*****************************************
 End of Generated Code
 *******************************************/
-// compilation: ok
+compilation: ok

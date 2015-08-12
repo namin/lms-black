@@ -1,9 +1,9 @@
-/*****************************************
+// /*****************************************
 Emitting Generated Code
 *******************************************/
 import language.higherKinds
 import scala.lms.black.eval._
-class Snippet extends Fun[NoRep] with (((Value, Cont[NoRep])) => Value) {
+class staged$0 extends Fun[NoRep] with (((Value, Cont[NoRep])) => Value) {
   def apply(v: (Value, Cont[NoRep])): Value = v._2(v._1)
   def fun[R[_]:Ops] = { v => fun[R]((v._1, v._2))  }
   def fun[R[_]:Ops](x0:(Value, Cont[R])): R[Value] = {
@@ -17,4 +17,4 @@ class Snippet extends Fun[NoRep] with (((Value, Cont[NoRep])) => Value) {
 /*****************************************
 End of Generated Code
 *******************************************/
-// compilation: ok
+compilation: ok
