@@ -46,7 +46,7 @@ object eval {
     case ("+", P(I(a), P(I(b), N))) => I(a+b)
     case ("-", P(I(a), P(I(b), N))) => I(a-b)
     case ("car", P(v, N)) => car(v)
-    case ("car", P(v, N)) => car(v)
+    case ("cdr", P(v, N)) => cdr(v)
   }
 
   trait Ops[R[_]] {
