@@ -65,6 +65,12 @@ object eval {
   def cdr(v: Value) = v match {
     case P(a, d) => d
   }
+  def set_car(p: Value, v: Value) = p match {
+    case _P(key, _) => cells += (key -> v)
+  }
+  def set_cdr(p: Value, v: Value) = p match {
+    case _P(_, key) => cells += (key -> v)
+  }
 
   def apply_cont[R[_]:Ops](cont: Value, v: R[Value]): R[Value] = cont match {
     case Cont(key) =>
@@ -81,6 +87,7 @@ object eval {
     def makePair(car: R[Value], cdr: R[Value]): R[Value]
     def getCar(p: R[Value]): R[Value]
     def getCdr(p: R[Value]): R[Value]
+    def setCdr(p: Value, v: R[Value]): R[Unit]
     def inRep: Boolean
   }
 
@@ -103,6 +110,7 @@ object eval {
     def makePair(car: Value, cdr: Value) = cons(car, cdr)
     def getCar(p: Value) = car(p)
     def getCdr(p: Value) = cdr(p)
+    def setCdr(p: Value, v: Value) = set_cdr(p, v)
     def inRep = false
   }
 
@@ -175,6 +183,24 @@ object eval {
             base_eval[R](thenp, env, cont),
             base_eval[R](elsep, env, cont))
         }))
+      case P(S("set!"), _) =>
+        val (name, body) = exp match {
+          case P(_, P(name, P(body, N))) => (name, body)
+        }
+        base_eval[R](body, env, mkCont[R]{ v =>
+          val op = env_get_pair(env, name) // NB: static env
+          val p: Value = op match {
+            case Some(p) => p
+            case None => env match {
+              case P(frame, _) =>
+                val p = cons(name, S("undefined"))
+                set_car(env, cons(p, frame))
+                p
+            }
+          }
+          setCdr(p, v)
+          apply_cont(cont, name)
+        })
       case P(k@S("hack"), _) =>
         env_get(env, k) match {
           case Evalfun(key) =>
@@ -200,15 +226,19 @@ object eval {
       val o = implicitly[Ops[R]]
       cons(cons(k, Code(o.getCar(c))), make_pairs[R](ks, Code(o.getCdr(c))))
   }
-  def env_get(env: Value, key: Value): Value = env match {
+  def env_get_pair(env: Value, key: Value): Option[Value] = env match {
     case P(frame, r) => frame_get(frame, key) match {
-      case Some(v) => v
-      case None => env_get(r, key)
+      case res@Some(p) => res
+      case None => env_get_pair(r, key)
     }
+    case _ => None
+  }
+  def env_get(env: Value, key: Value): Value = env_get_pair(env, key) match {
+    case Some(P(_, v)) => v
     case _ => throw new Error("unbound variable "+key+" in "+env)
   }
   def frame_get(frame: Value, key: Value): Option[Value] = frame match {
-    case P(P(k, v), r) => if (k==key) Some(v) else frame_get(r, key)
+    case P(p@P(k, v), r) => if (k==key) Some(p) else frame_get(r, key)
     case N => None
   }
 
@@ -268,6 +298,7 @@ trait EvalDsl extends Functions with TupleOps with IfThenElse with Equal with Un
       unchecked("makePair(", car, ", ", cdr, ")")
     def getCar(p: Rep[Value]) = unchecked("car(", p, ")")
     def getCdr(p: Rep[Value]) = unchecked("cdr(", p, ")")
+    def setCdr(p: Value, v: Rep[Value]) = unchecked("set_cdr(", p, ", ", v, ")")
     def inRep = true
   }
 
