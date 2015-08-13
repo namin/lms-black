@@ -5,14 +5,10 @@ import eval._
 class TestEvaluator extends TestSuite {
   val under = "eval_"
 
-  def list2pair(xs: List[Value]): Value = xs match {
-    case Nil => N
-    case (x::xs) => P(x, list2pair(xs))
-  }
   def If(cond: Value, thenp: Value, elsep: Value) =
     P(S("if"), P(cond, P(thenp, P(elsep, N))))
   def A(f: Value, args: List[Value]) =
-    P(f, list2pair(args))
+    P(f, list_to_value(args))
   def V(sym: String) = S(sym)
   def L(compile: Boolean, param: String, body: Value) =
     P(S((if (compile) "c" else "")+"lambda"), P(P(S(param), N), P(body, N)))
@@ -29,8 +25,8 @@ class TestEvaluator extends TestSuite {
   }
 
   def Y(c: Boolean) = L(c, "fun", A(L(c, "F", A(V("F"), List(V("F")))), List(L(c, "F", A(V("fun"), List(L(c, "x", A(A(V("F"), List(V("F"))), List(V("x"))))))))))
-  def fib(c: Boolean) = L(c, "fib", L(c, "n", If(A(Prim("<"), List(V("n"), I(2))), V("n"), A(Prim("+"), List(A(V("fib"), List(A(Prim("-"), List(V("n"), I(1))))), A(V("fib"), List(A(Prim("-"), List(V("n"), I(2))))))))))
-  def sumf(c: Boolean) = L(c, "f", L(c, "sumf", L(c, "n", If(A(Prim("<"), List(V("n"), I(0))), I(0), A(Prim("+"), List(A(V("f"), List(V("n"))), A(V("sumf"), List(A(Prim("-"), List(V("n"), I(1)))))))))))
+  def fib(c: Boolean) = L(c, "fib", L(c, "n", If(A(S("<"), List(V("n"), I(2))), V("n"), A(S("+"), List(A(V("fib"), List(A(S("-"), List(V("n"), I(1))))), A(V("fib"), List(A(S("-"), List(V("n"), I(2))))))))))
+  def sumf(c: Boolean) = L(c, "f", L(c, "sumf", L(c, "n", If(A(S("<"), List(V("n"), I(0))), I(0), A(S("+"), List(A(V("f"), List(V("n"))), A(V("sumf"), List(A(S("-"), List(V("n"), I(1)))))))))))
 
   test ("fib 7 evaluated") {
     assertResult(I(13)){
@@ -63,12 +59,12 @@ class TestEvaluator extends TestSuite {
 
   test ("hack") {
     assertResult(I(0)){
-      top_eval[NoRep](A(L(false, "hack", A(S("hack"), List(I(0), A(Prim("cdr"), List(I(0)))))),
+      top_eval[NoRep](A(L(false, "hack", A(S("hack"), List(I(0), A(S("cdr"), List(I(0)))))),
         List(L(true, "e",
           A(S("base_eval"),
-            List(A(Prim("cons"),
-              List(A(Prim("car"), List(A(Prim("cdr"), List(A(Prim("car"), List(S("e"))))))),
-                A(Prim("cdr"), List(S("e")))))))))))
+            List(A(S("cons"),
+              List(A(S("car"), List(A(S("cdr"), List(A(S("car"), List(S("e"))))))),
+                A(S("cdr"), List(S("e")))))))))))
     }
   }
 
@@ -77,13 +73,13 @@ class TestEvaluator extends TestSuite {
     assertResult(I(0)){
       top_eval[NoRep](A(L(false, "hack",
         A(L(true, "n",
-          A(S("hack"), List(S("n"), A(Prim("cdr"), List(S("n")))))),
+          A(S("hack"), List(S("n"), A(S("cdr"), List(S("n")))))),
           List(I(0)))),
         List(L(true, "e",
           A(S("base_eval"),
-            List(A(Prim("cons"),
-              List(A(Prim("car"), List(A(Prim("cdr"), List(A(Prim("car"), List(S("e"))))))),
-                A(Prim("cdr"), List(S("e")))))))))))
+            List(A(S("cons"),
+              List(A(S("car"), List(A(S("cdr"), List(A(S("car"), List(S("e"))))))),
+                A(S("cdr"), List(S("e")))))))))))
 
     }
   }

@@ -72,15 +72,6 @@ object eval {
       f(v)
   }
 
-  def apply_primitive(p: String, args: Value): Value = (p, args) match {
-    case ("<", P(I(a), P(I(b), N))) => B(a < b)
-    case ("+", P(I(a), P(I(b), N))) => I(a+b)
-    case ("-", P(I(a), P(I(b), N))) => I(a-b)
-    case ("car", P(v, N)) => car(v)
-    case ("cdr", P(v, N)) => cdr(v)
-    case ("cons", P(a, P(d, N))) => cons(a, d)
-  }
-
   trait Ops[R[_]] {
     implicit def lift(v: Value): R[Value]
     def app(fun: R[Value], args: R[Value], env: Value, cont: Value): R[Value]
@@ -139,7 +130,6 @@ object eval {
     exp match {
       case e@I(n) => apply_cont[R](cont, lift(e))
       case e@B(b) => apply_cont[R](cont, lift(e))
-      case e@Prim(p) => apply_cont[R](cont, lift(e))
       case e@S(sym) => env_get(env, e) match {
         case Code(v) => apply_cont[R](cont, v.asInstanceOf[R[Value]])
         case v => apply_cont(cont, lift(v))
@@ -198,7 +188,30 @@ object eval {
     case P(P(k, v), r) => if (k==key) v else env_get(r, key)
     case _ => throw new Error("unbound variable "+key+" in "+env)
   }
-  def init_env = P(P(S("base_eval"), evalfun(base_eval_fun)), N)
+
+  def apply_primitive(p: String, args: Value): Value = (p, args) match {
+    case ("<", P(I(a), P(I(b), N))) => B(a < b)
+    case ("+", P(I(a), P(I(b), N))) => I(a+b)
+    case ("-", P(I(a), P(I(b), N))) => I(a-b)
+    case ("car", P(v, N)) => car(v)
+    case ("cdr", P(v, N)) => cdr(v)
+    case ("cons", P(a, P(d, N))) => cons(a, d)
+  }
+
+  def init_env = list_to_value(List(
+    P(S("base_eval"), evalfun(base_eval_fun)),
+    P(S("<"), Prim("<")),
+    P(S("+"), Prim("+")),
+    P(S("-"), Prim("-")),
+    P(S("car"), Prim("car")),
+    P(S("cdr"), Prim("cdr")),
+    P(S("cons"), Prim("cons"))
+  ))
+
+  def list_to_value(xs: List[Value]): Value = xs match {
+    case Nil => N
+    case (x::xs) => P(x, list_to_value(xs))
+  }
 
   def top_eval[R[_]:Ops](exp: Value): R[Value] = {
     try {
