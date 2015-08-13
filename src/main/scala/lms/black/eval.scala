@@ -87,7 +87,9 @@ object eval {
     def makePair(car: R[Value], cdr: R[Value]): R[Value]
     def getCar(p: R[Value]): R[Value]
     def getCdr(p: R[Value]): R[Value]
-    def setCdr(p: Value, v: R[Value]): R[Unit]
+    def setCar(p: R[Value], v: R[Value]): R[Unit]
+    def setCdr(p: R[Value], v: R[Value]): R[Unit]
+    def envUpdatePair(env: R[Value], name: R[Value]): R[Value]
     def inRep: Boolean
   }
 
@@ -110,7 +112,20 @@ object eval {
     def makePair(car: Value, cdr: Value) = cons(car, cdr)
     def getCar(p: Value) = car(p)
     def getCdr(p: Value) = cdr(p)
+    def setCar(p: Value, v: Value) = set_car(p, v)
     def setCdr(p: Value, v: Value) = set_cdr(p, v)
+    def envUpdatePair(env: Value, name: Value) = {
+      env_get_pair(env, name) match {
+        case Some(p) => p
+        case None =>
+          env match {
+            case P(frame, _) =>
+              val p = cons(name, S("undefined"))
+              set_car(env, cons(p, frame))
+              p
+          }
+      }
+    }
     def inRep = false
   }
 
@@ -188,16 +203,7 @@ object eval {
           case P(_, P(name, P(body, N))) => (name, body)
         }
         base_eval[R](body, env, mkCont[R]{ v =>
-          val op = env_get_pair(env, name) // NB: static env
-          val p: Value = op match {
-            case Some(p) => p
-            case None => env match {
-              case P(frame, _) =>
-                val p = cons(name, S("undefined"))
-                set_car(env, cons(p, frame))
-                p
-            }
-          }
+          val p = envUpdatePair(env, name)
           setCdr(p, v)
           apply_cont(cont, name)
         })
@@ -215,7 +221,6 @@ object eval {
       }))
     }
   }
-
   def eval_begin[R[_]:Ops](body: Value, env: Value, cont: Value): R[Value] =
     body match {
       case P(exp, N) => base_eval[R](exp, env, cont)
@@ -307,7 +312,9 @@ trait EvalDsl extends Functions with TupleOps with IfThenElse with Equal with Un
       unchecked("makePair(", car, ", ", cdr, ")")
     def getCar(p: Rep[Value]) = unchecked("car(", p, ")")
     def getCdr(p: Rep[Value]) = unchecked("cdr(", p, ")")
-    def setCdr(p: Value, v: Rep[Value]) = unchecked("set_cdr(", p, ", ", v, ")")
+    def setCar(p: Rep[Value], v: Rep[Value]) = unchecked("setCar(", p, ", ", v, ")")
+    def setCdr(p: Rep[Value], v: Rep[Value]) = unchecked("setCdr(", p, ", ", v, ")")
+    def envUpdatePair(env: Rep[Value], name: Rep[Value]) = unchecked("envUpdatePair(", env, ", ", name, ")")
     def inRep = true
   }
 
