@@ -1,7 +1,6 @@
 package scala.lms.black
 
 object eval {
-  type Env = Value
   sealed trait Value
   case class I(n: Int) extends Value
   case class B(b: Boolean) extends Value
@@ -20,7 +19,7 @@ object eval {
   case class Prim(p: String) extends Value {
     override def toString = "Prim(\""+p+"\")"
   }
-  case class Clo(param: Value, body: Value, env: Env) extends Value
+  case class Clo(param: Value, body: Value, env: Value) extends Value
   case class Evalfun(key: Int) extends Value
   case class Code[R[_]](c: R[Value]) extends Value
   case class Cont(key: Int) extends Value
@@ -67,7 +66,7 @@ object eval {
     case P(a, d) => d
   }
 
-  def apply_cont[R[_]:Ops](cont: Cont, v: R[Value]): R[Value] = cont match {
+  def apply_cont[R[_]:Ops](cont: Value, v: R[Value]): R[Value] = cont match {
     case Cont(key) =>
       val f = conts(key).fun[R]
       f(v)
@@ -84,7 +83,7 @@ object eval {
 
   trait Ops[R[_]] {
     implicit def lift(v: Value): R[Value]
-    def app(fun: R[Value], args: R[Value], env: Env, cont: Cont): R[Value]
+    def app(fun: R[Value], args: R[Value], env: Value, cont: Value): R[Value]
     def isTrue(v: R[Value]): R[Boolean]
     def ifThenElse[A:Manifest](cond: R[Boolean], thenp: => R[A], elsep: => R[A]): R[A]
     def makeFun(f: Fun[R]): R[Value]
@@ -95,7 +94,7 @@ object eval {
   type NoRep[A] = A
   implicit object OpsNoRep extends Ops[NoRep] {
     def lift(v: Value) = v
-    def app(fun: Value, args: Value, env: Env, cont: Cont) =
+    def app(fun: Value, args: Value, env: Value, cont: Value) =
       fun match {
         case Clo(param, body, cenv) =>
           base_eval[NoRep](body, env_add(cenv, param, car(args)), cont)
@@ -112,12 +111,12 @@ object eval {
     def inRep = false
   }
 
-  def base_apply[R[_]:Ops](fun: R[Value], args: R[Value], env: Env, cont: Cont) = {
+  def base_apply[R[_]:Ops](fun: R[Value], args: R[Value], env: Value, cont: Value) = {
     val o = implicitly[Ops[R]]
     o.app(fun, args, env, cont)
   }
 
-  def base_evlist[R[_]:Ops](exps: Value, env: Env, cont: Cont): R[Value] = {
+  def base_evlist[R[_]:Ops](exps: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     exps match {
       case N => apply_cont[R](cont, lift(N))
@@ -131,11 +130,11 @@ object eval {
 
   def base_eval_fun: Fun[NoRep] = new Fun[NoRep] {
     def fun[R[_]:Ops] = { (vc: Value) =>
-      val P(exp, env) = vc
-      base_eval[R](exp, env, mkCont[R](x => x))
+      val P(exp, P(env, P(cont, N))) = vc
+      base_eval[R](exp, env, cont)
     }
   }
-  def base_eval[R[_]:Ops](exp: Value, env: Env, cont: Cont): R[Value] = {
+  def base_eval[R[_]:Ops](exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     exp match {
       case e@I(n) => apply_cont[R](cont, lift(e))
@@ -184,7 +183,7 @@ object eval {
         env_get(env, k) match {
           case Evalfun(key) =>
             val f = funs(key).fun[R]
-            apply_cont(cont, f(P(exp, env)))
+            f(P(exp, P(env, P(cont, N))))
         }
       case P(fun, args) => base_eval[R](fun, env, mkCont[R]({ v =>
         base_evlist[R](args, env, mkCont[R]({ vs =>
@@ -214,11 +213,11 @@ import eval._
 import scala.lms.common._
 
 trait EvalDsl extends Functions with TupleOps with IfThenElse with Equal with UncheckedOps {
-  def base_apply_rep(f: Rep[Value], args: Rep[Value], env: Env, cont: Cont): Rep[Value]
+  def base_apply_rep(f: Rep[Value], args: Rep[Value], env: Value, cont: Value): Rep[Value]
   def make_fun_rep(f: Fun[Rep]): Rep[Value]
   implicit object OpsRep extends scala.Serializable with Ops[Rep] {
     def lift(v: Value) = unit(v)
-    def app(f: Rep[Value], args: Rep[Value], env: Env, cont: Cont) =
+    def app(f: Rep[Value], args: Rep[Value], env: Value, cont: Value) =
       base_apply_rep(f, args, env, cont)
     def isTrue(v: Rep[Value]): Rep[Boolean] = unchecked("isTrue(", v, ")")//unit(B(false))!=v
     def ifThenElse[A:Manifest](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A] = if (cond) thenp else elsep
@@ -232,9 +231,10 @@ trait EvalDsl extends Functions with TupleOps with IfThenElse with Equal with Un
 }
 
 trait EvalDslExp extends EvalDsl with EffectExp with FunctionsRecursiveExp with TupleOpsExp with IfThenElseExp with EqualExp with UncheckedOpsExp {
-  case class BaseApplyRep(f: Rep[Value], args: Rep[Value], env: Env, cont: Rep[Value => Value]) extends Def[Value]
-  def base_apply_rep(f: Rep[Value], args: Rep[Value], env: Env, cont: Cont): Rep[Value] =
-    reflectEffect(BaseApplyRep(f, args, env, fun(conts(cont.key).fun[Rep])))
+  case class BaseApplyRep(f: Rep[Value], args: Rep[Value], env: Value, cont: Rep[Value => Value]) extends Def[Value]
+  def base_apply_rep(f: Rep[Value], args: Rep[Value], env: Value, cont: Value): Rep[Value] = cont match {
+    case Cont(key) => reflectEffect(BaseApplyRep(f, args, env, fun(conts(key).fun[Rep])))
+  }
 
   case class EvalfunRep(x: Sym[Value], y: Block[Value]) extends Def[Value]
   def make_fun_rep(f: Fun[Rep]) = {
