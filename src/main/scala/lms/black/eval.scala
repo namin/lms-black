@@ -201,6 +201,7 @@ object eval {
           setCdr(p, v)
           apply_cont(cont, name)
         })
+      case P(S("begin"), body) => eval_begin[R](body, env, cont)
       case P(k@S("hack"), _) =>
         env_get(env, k) match {
           case Evalfun(key) =>
@@ -214,6 +215,14 @@ object eval {
       }))
     }
   }
+
+  def eval_begin[R[_]:Ops](body: Value, env: Value, cont: Value): R[Value] =
+    body match {
+      case P(exp, N) => base_eval[R](exp, env, cont)
+      case P(exp, rest) => base_eval[R](exp, env, mkCont[R]{ _ =>
+        eval_begin[R](rest, env, cont)
+      })
+    }
 
   def env_extend[R[_]:Ops](env: Value, params: Value, args: Value) =
     cons(make_pairs[R](params, args), env)
