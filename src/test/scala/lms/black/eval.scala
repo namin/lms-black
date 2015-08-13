@@ -12,6 +12,8 @@ class TestEvaluator extends TestSuite {
   def V(sym: String) = S(sym)
   def L(compile: Boolean, param: String, body: Value) =
     P(S((if (compile) "c" else "")+"lambda"), P(P(S(param), N), P(body, N)))
+  def L(compile: Boolean, params: List[String], body: Value) =
+    P(S((if (compile) "c" else "")+"lambda"), P(list_to_value(params.map(S)), P(body, N)))
 
   def ex_id(c: Boolean) = A(L(c, "x", V("x")), List(I(1)))
   test ("id evaluated") {
@@ -60,11 +62,10 @@ class TestEvaluator extends TestSuite {
   test ("hack") {
     assertResult(I(0)){
       top_eval[NoRep](A(L(false, "hack", A(S("hack"), List(I(0), A(S("cdr"), List(I(0)))))),
-        List(L(true, "e",
+        List(L(true, List("exp", "env", "cont"),
           A(S("base_eval"),
-            List(A(S("cons"),
-              List(A(S("car"), List(A(S("cdr"), List(A(S("car"), List(S("e"))))))),
-                A(S("cdr"), List(S("e")))))))))))
+            List(A(S("car"), List(A(S("cdr"), List(S("exp"))))),
+              S("env"), S("cont")))))))
     }
   }
 
@@ -75,12 +76,10 @@ class TestEvaluator extends TestSuite {
         A(L(true, "n",
           A(S("hack"), List(S("n"), A(S("cdr"), List(S("n")))))),
           List(I(0)))),
-        List(L(true, "e",
+        List(L(true, List("exp", "env", "cont"),
           A(S("base_eval"),
-            List(A(S("cons"),
-              List(A(S("car"), List(A(S("cdr"), List(A(S("car"), List(S("e"))))))),
-                A(S("cdr"), List(S("e")))))))))))
-
+            List(A(S("car"), List(A(S("cdr"), List(S("exp"))))),
+              S("env"), S("cont")))))))
     }
   }
 

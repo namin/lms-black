@@ -19,7 +19,7 @@ object eval {
   case class Prim(p: String) extends Value {
     override def toString = "Prim(\""+p+"\")"
   }
-  case class Clo(param: Value, body: Value, env: Value) extends Value
+  case class Clo(params: Value, body: Value, env: Value) extends Value
   case class Evalfun(key: Int) extends Value
   case class Code[R[_]](c: R[Value]) extends Value
   case class Cont(key: Int) extends Value
@@ -79,6 +79,8 @@ object eval {
     def ifThenElse[A:Manifest](cond: R[Boolean], thenp: => R[A], elsep: => R[A]): R[A]
     def makeFun(f: Fun[R]): R[Value]
     def makePair(car: R[Value], cdr: R[Value]): R[Value]
+    def getCar(p: R[Value]): R[Value]
+    def getCdr(p: R[Value]): R[Value]
     def inRep: Boolean
   }
 
@@ -87,11 +89,11 @@ object eval {
     def lift(v: Value) = v
     def app(fun: Value, args: Value, env: Value, cont: Value) =
       fun match {
-        case Clo(param, body, cenv) =>
-          base_eval[NoRep](body, env_add(cenv, param, car(args)), cont)
+        case Clo(params, body, cenv) =>
+          base_eval[NoRep](body, env_extend[NoRep](cenv, params, args), cont)
         case Evalfun(key) =>
           val f = funs(key).fun[NoRep]
-          apply_cont[NoRep](cont, f(car(args)))
+          apply_cont[NoRep](cont, f(args))
         case Prim(p) =>
           apply_cont[NoRep](cont, apply_primitive(p, args))
       }
@@ -99,6 +101,8 @@ object eval {
     def ifThenElse[A:Manifest](cond: Boolean, thenp: => A, elsep: => A): A = if (cond) thenp else elsep
     def makeFun(f: Fun[NoRep]) = evalfun(f)
     def makePair(car: Value, cdr: Value) = cons(car, cdr)
+    def getCar(p: Value) = car(p)
+    def getCdr(p: Value) = cdr(p)
     def inRep = false
   }
 
@@ -131,22 +135,24 @@ object eval {
       case e@I(n) => apply_cont[R](cont, lift(e))
       case e@B(b) => apply_cont[R](cont, lift(e))
       case e@S(sym) => env_get(env, e) match {
-        case Code(v) => apply_cont[R](cont, v.asInstanceOf[R[Value]])
+        case Code(v: R[Value]) => apply_cont[R](cont, v)
         case v => apply_cont(cont, lift(v))
       }
       case P(S("lambda"), _) =>
-        val (param, body) = exp match {
-          case P(_, P(P(param, N), P(body, N))) => (param, body)
+        val (params, body) = exp match {
+          case P(_, P(params, P(body, N))) => (params, body)
         }
-        apply_cont(cont, lift(Clo(param, body, env)))
+        apply_cont(cont, lift(Clo(params, body, env)))
       case P(S("clambda"), _) =>
-        val (param, body) = exp match {
-          case P(_, P(P(param, N), P(body, N))) => (param, body)
+        val (params, body) = exp match {
+          case P(_, P(params, P(body, N))) => (params, body)
         }
         if (!inRep) {
           trait Program extends EvalDsl {
             def snippet(v: Rep[Value]): Rep[Value] = {
-              base_eval[Rep](body, env_add(env, param, Code(v)), mkCont[Rep](x => x)(OpsRep))(OpsRep)
+              base_eval[Rep](body,
+                env_extend[Rep](env, params, Code(v))(OpsRep),
+                mkCont[Rep](x => x)(OpsRep))(OpsRep)
             }
           }
           val r = new EvalDslDriver with Program
@@ -155,7 +161,7 @@ object eval {
         } else {
           val f = makeFun(new Fun[R] {
             def fun[RF[_]:Ops] = {(v: R[Value]) =>
-              base_eval[RF](body, env_add(env, param, Code(v)), mkCont[RF](x => x))
+              base_eval[RF](body, env_extend[RF](env, params, Code(v)), mkCont[RF](x => x))
             }
           })
           apply_cont(cont, f)
@@ -183,10 +189,27 @@ object eval {
     }
   }
 
-  def env_add(env: Value, k: Value, v: Value) = P(P(k, v), env)
+  def env_extend[R[_]:Ops](env: Value, params: Value, args: Value) =
+    cons(make_pairs[R](params, args), env)
+  def make_pairs[R[_]:Ops](ks: Value, vs: Value): Value = (ks, vs) match {
+    case (N, N) => N
+    case (N, Code(_)) => N
+    case (S(s), _) => cons(cons(ks, vs), N)
+    case (P(k, ks), P(v, vs)) => cons(cons(k, v), make_pairs[R](ks, vs))
+    case (P(k, ks), Code(c : R[Value])) =>
+      val o = implicitly[Ops[R]]
+      cons(cons(k, Code(o.getCar(c))), make_pairs[R](ks, Code(o.getCdr(c))))
+  }
   def env_get(env: Value, key: Value): Value = env match {
-    case P(P(k, v), r) => if (k==key) v else env_get(r, key)
+    case P(frame, r) => frame_get(frame, key) match {
+      case Some(v) => v
+      case None => env_get(r, key)
+    }
     case _ => throw new Error("unbound variable "+key+" in "+env)
+  }
+  def frame_get(frame: Value, key: Value): Option[Value] = frame match {
+    case P(P(k, v), r) => if (k==key) Some(v) else frame_get(r, key)
+    case N => None
   }
 
   def apply_primitive(p: String, args: Value): Value = (p, args) match {
@@ -198,7 +221,7 @@ object eval {
     case ("cons", P(a, P(d, N))) => cons(a, d)
   }
 
-  def init_env = list_to_value(List(
+  def init_frame = list_to_value(List(
     P(S("base_eval"), evalfun(base_eval_fun)),
     P(S("<"), Prim("<")),
     P(S("+"), Prim("+")),
@@ -207,10 +230,16 @@ object eval {
     P(S("cdr"), Prim("cdr")),
     P(S("cons"), Prim("cons"))
   ))
+  def init_env = cons(init_frame, N)
 
   def list_to_value(xs: List[Value]): Value = xs match {
     case Nil => N
     case (x::xs) => P(x, list_to_value(xs))
+  }
+
+  def pp(v: Value): String = v match {
+    case P(a, d) => "P("+pp(a)+", "+pp(d)+")"
+    case _ => v.toString
   }
 
   def top_eval[R[_]:Ops](exp: Value): R[Value] = {
@@ -237,6 +266,8 @@ trait EvalDsl extends Functions with TupleOps with IfThenElse with Equal with Un
     def makeFun(f: Fun[Rep]) = make_fun_rep(f)
     def makePair(car: Rep[Value], cdr: Rep[Value]) =
       unchecked("makePair(", car, ", ", cdr, ")")
+    def getCar(p: Rep[Value]) = unchecked("car(", p, ")")
+    def getCdr(p: Rep[Value]) = unchecked("cdr(", p, ")")
     def inRep = true
   }
 
