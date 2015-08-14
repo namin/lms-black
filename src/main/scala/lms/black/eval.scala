@@ -16,7 +16,21 @@ object eval {
   case class Evalfun(key: Int) extends Value
   case class Code[R[_]](c: R[Value]) extends Value
   case class Cont(key: Int) extends Value
+  case class Cell(key: Int) extends Value
 
+  var cells = Map[Int, Value]()
+  def addCell(v: Value): Int = {
+    val key = cells.size
+    cells += (key -> v)
+    key
+  }
+  def cell_new(v: Value) = Cell(addCell(v))
+  def cell_read(c: Value) = c match {
+    case Cell(key) => cells(key)
+  }
+  def cell_set(c: Value, v: Value) = c match {
+    case Cell(key) => cells += (key -> v); v
+  }
   abstract class Fun[W[_]:Ops] extends Serializable {
     def fun[R[_]:Ops]: W[Value] => R[Value]
   }
@@ -38,6 +52,7 @@ object eval {
   def reset() {
     funs = funs.empty
     conts = conts.empty
+    cells = cells.empty
   }
   def evalfun(f: Fun[NoRep]) = Evalfun(addFun(f))
   def mkCont[R[_]:Ops](f: R[Value] => R[Value]) = Cont(addCont(new FunC {
@@ -217,6 +232,9 @@ object eval {
     case ("car", P(v, N)) => car(v)
     case ("cdr", P(v, N)) => cdr(v)
     case ("cons", P(a, P(d, N))) => cons(a, d)
+    case ("cell_new", P(v, N)) => cell_new(v)
+    case ("cell_read", P(c, N)) => cell_read(c)
+    case ("cell_set!", P(c, P(v, N))) => cell_set(c, v)
   }
 
   def init_frame = list_to_value(List(
@@ -226,7 +244,10 @@ object eval {
     P(S("-"), Prim("-")),
     P(S("car"), Prim("car")),
     P(S("cdr"), Prim("cdr")),
-    P(S("cons"), Prim("cons"))
+    P(S("cons"), Prim("cons")),
+    P(S("cell_new"), Prim("cell_new")),
+    P(S("cell_read"), Prim("cell_read")),
+    P(S("cell_set!"), Prim("cell_set!"))
   ))
   def init_env = cons(init_frame, N)
 
