@@ -265,7 +265,7 @@ object eval {
       case S("eval-var") => eval_var[R](exp, env, cont)
       case S("eval-application") => eval_application[R](exp, env, cont)
     } else {
-      inEval += exp
+      inEval += s
       val o = implicitly[Ops[R]]; import o._
       val fun = env_get(env, s) match {
         case v@Cell(_) => cell_read(v)
