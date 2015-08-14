@@ -139,13 +139,8 @@ object eval {
   def base_eval[R[_]:Ops](exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     exp match {
-      case e@I(n) => apply_cont[R](cont, lift(e))
-      case e@B(b) => apply_cont[R](cont, lift(e))
-      case e@S(sym) => env_get(env, e) match {
-        case Code(v: R[Value]) => apply_cont[R](cont, cellRead(v))
-        case v@Cell(_) => apply_cont[R](cont, cellRead(v))
-        case v => apply_cont(cont, lift(v))
-      }
+      case I(_) | B(_) => apply_cont[R](cont, lift(exp))
+      case S(sym) => eval_var[R](exp, env, cont)
       case P(S("lambda"), _) =>
         val (params, body) = exp match {
           case P(_, P(params, P(body, N))) => (params, body)
@@ -213,6 +208,14 @@ object eval {
         eval_begin[R](rest, env, cont)
       })
     }
+  def eval_var[R[_]:Ops](exp: Value, env: Value, cont: Value): R[Value] = {
+    val o = implicitly[Ops[R]]; import o._
+    env_get(env, exp) match {
+      case Code(v: R[Value]) => apply_cont[R](cont, cellRead(v))
+      case v@Cell(_) => apply_cont[R](cont, cellRead(v))
+      case v => apply_cont(cont, lift(v))
+    }
+  }
 
   def env_extend[R[_]:Ops](env: Value, params: Value, args: Value) =
     cons(make_pairs[R](params, args), env)
