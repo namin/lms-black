@@ -106,7 +106,9 @@ object eval {
     def lift(v: Value) = v
     def app(fun: Value, args: Value, env: Value, cont: Value) =
       static_apply[NoRep](fun, args, env, cont)
-    def isTrue(v: Value) = B(false)!=v
+    def isTrue(v: Value) = v match {
+      case B(b) => b
+    }
     def ifThenElse[A:Manifest](cond: Boolean, thenp: => A, elsep: => A): A = if (cond) thenp else elsep
     def makeFun(f: Fun[NoRep]) = evalfun(f)
     def makePair(car: Value, cdr: Value) = cons(car, cdr)
@@ -393,7 +395,7 @@ trait EvalDslExp extends EvalDsl with EffectExp with FunctionsRecursiveExp with 
       val fn = f.fun[Rep]
       fn(x)
     }
-    EvalfunRep(x, y)
+    reflectEffect(EvalfunRep(x, y))
   }
 
   override def boundSyms(e: Any): List[Sym[Any]] = e match {

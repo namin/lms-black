@@ -28,7 +28,7 @@ class TestEvaluator extends TestSuite {
 
   def Y(c: Boolean) = L(c, "fun", A(L(c, "F", A(V("F"), List(V("F")))), List(L(c, "F", A(V("fun"), List(L(c, "x", A(A(V("F"), List(V("F"))), List(V("x"))))))))))
   def fib(c: Boolean) = L(c, "fib", L(c, "n", If(A(S("<"), List(V("n"), I(2))), V("n"), A(S("+"), List(A(V("fib"), List(A(S("-"), List(V("n"), I(1))))), A(V("fib"), List(A(S("-"), List(V("n"), I(2))))))))))
-  def sumf(c: Boolean) = L(c, "f", L(c, "sumf", L(c, "n", If(A(S("<"), List(V("n"), I(0))), I(0), A(S("+"), List(A(V("f"), List(V("n"))), A(V("sumf"), List(A(S("-"), List(V("n"), I(1)))))))))))
+  def sumf(c: Boolean) = L(c, "f", L(c, "sumf", L(c, "a", If(A(S("<"), List(V("a"), I(0))), I(0), A(S("+"), List(A(V("f"), List(V("a"))), A(V("sumf"), List(A(S("-"), List(V("a"), I(1)))))))))))
 
   test ("fib 7 evaluated") {
     assertResult(I(13)){
@@ -53,12 +53,13 @@ class TestEvaluator extends TestSuite {
     assertResult(I(33)){
       top_eval[NoRep](A(A(Y(false), List(A(sumf(false), List(A(Y(false), List(fib(false))))))), List(I(7))))}
   }
-/*
+
   test ("sum of fibs compiled") {
     assertResult(I(33)){
-      top_eval[NoRep](A(A(Y(true), List(A(sumf(true), List(A(Y(true), List(fib(true))))))), List(I(7))))}
+      // changing the first false to true result in SO
+      top_eval[NoRep](A(A(Y(false), List(A(sumf(true), List(A(Y(true), List(fib(true))))))), List(I(7))))}
   }
-*/
+
   test ("hack") {
     assertResult(I(0)){
       top_eval[NoRep](A(L(false, "hack", A(S("hack"), List(I(0), A(S("cdr"), List(I(0)))))),
