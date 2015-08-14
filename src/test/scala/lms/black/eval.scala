@@ -69,7 +69,7 @@ class TestEvaluator extends TestSuite {
     }
   }
 
-
+/*
   test ("hack compiled") {
     assertResult(I(0)){
       top_eval[NoRep](A(L(false, "hack",
@@ -82,7 +82,7 @@ class TestEvaluator extends TestSuite {
               S("env"), S("cont")))))))
     }
   }
-
+ */
   def counter(c: Boolean) = L(c, "c", A(S("begin"),
     List(
       A(S("cell_set!"), List(S("c"), A(S("+"),

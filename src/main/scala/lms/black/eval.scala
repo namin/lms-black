@@ -193,6 +193,17 @@ object eval {
           cellSet(lift(p), v)
           apply_cont(cont, name)
         }))
+      case P(S("define"), _) =>
+        val (name, body) = exp match {
+          case P(_, P(name, P(body, N))) => (name, body)
+        }
+        base_eval[R](body, env, mkCont[R]({ v =>
+          val (c, frame) = env match {
+            case P(c@Cell(key), _) => (c, cells(key))
+          }
+          cellSet(lift(c), makePair(makePair(name, cellNew(v)), frame))
+          apply_cont(cont, name)
+        }))
       case P(k@S("hack"), _) =>
         cell_read(env_get(env, k)) match {
           case Evalfun(key) =>
@@ -230,6 +241,8 @@ object eval {
     }
   }
   def meta_eval_var[R[_]:Ops](exp: Value, env: Value, cont: Value): R[Value] = {
+    eval_var[R](exp, env, cont)
+    /*
     val o = implicitly[Ops[R]]; import o._
     val vf = env_get(env, S("eval_var")) match {
       case v@Cell(_) => cell_read(v)
@@ -237,10 +250,11 @@ object eval {
     if (inRep)
       static_apply[R](vf, P(exp, P(env, P(mkCont[R]{x => x}, N))), env, cont)
     else static_apply[R](vf, P(exp, P(env, P(cont, N))), env, mkCont[R]{x => x})
+     */
   }
 
   def env_extend[R[_]:Ops](env: Value, params: Value, args: Value) =
-    cons(make_pairs[R](params, args), env)
+    cons(cell_new(make_pairs[R](params, args)), env)
   def make_pairs[R[_]:Ops](ks: Value, vs: Value): Value = (ks, vs) match {
     case (N, N) => N
     case (N, Code(_)) => N
@@ -251,7 +265,7 @@ object eval {
       cons(cons(k, Code(o.cellNew(o.getCar(c)))), make_pairs[R](ks, Code(o.getCdr(c))))
   }
   def env_get_pair(env: Value, key: Value): Option[Value] = env match {
-    case P(frame, r) => frame_get(frame, key) match {
+    case P(Cell(k), r) => frame_get(cells(k), key) match {
       case res@Some(p) => res
       case None => env_get_pair(r, key)
     }
@@ -291,7 +305,7 @@ object eval {
     P(S("cell_read"), Prim("cell_read")),
     P(S("cell_set!"), Prim("cell_set!"))
   ))
-  def init_env = cons(init_frame, N)
+  def init_env = cons(Cell(addCell(init_frame)), N)
 
   def list_to_value(xs: List[Value]): Value = xs match {
     case Nil => N
