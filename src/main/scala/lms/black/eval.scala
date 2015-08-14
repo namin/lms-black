@@ -296,6 +296,7 @@ object eval {
     case ("cell_read", P(c, N)) => cell_read(c)
     case ("cell_set!", P(c, P(v, N))) => cell_set(c, v)
     case ("eq?", P(a, P(b, N))) => B(a==b)
+    case ("display", P(a, N)) => display(a); I(0)
   }
 
   def init_frame = list_to_value(List(
@@ -310,7 +311,8 @@ object eval {
     P(S("cell_new"), Prim("cell_new")),
     P(S("cell_read"), Prim("cell_read")),
     P(S("cell_set!"), Prim("cell_set!")),
-    P(S("eq?"), Prim("eq?"))
+    P(S("eq?"), Prim("eq?")),
+    P(S("display"), Prim("display"))
   ))
   def init_env = cons(Cell(addCell(init_frame)), N)
 
@@ -319,10 +321,29 @@ object eval {
     case (x::xs) => P(x, list_to_value(xs))
   }
 
-  def pp(v: Value): String = v match {
-    case P(a, d) => "P("+pp(a)+", "+pp(d)+")"
-    case _ => v.toString
+  def addParen(p: (Boolean, String)) = {
+    val (need_paren, s) = p
+    if (need_paren) "("+s+")" else s
   }
+  def pp(v: Value): (Boolean, String) = v match {
+    case B(b) => (false, if (b) "#t" else "#f")
+    case I(n) => (false, n.toString)
+    case S(s) => (false, s)
+    case N => (true, "")
+    case P(a, N) => (true, addParen(pp(a)))
+    case P(a, d) =>
+      val s1 = addParen(pp(a))
+      val (need_paren2, s2) = pp(d)
+      if (need_paren2) (true, s1+" "+s2)
+      else (true, s1+" . "+s2)
+    case Prim(p) => (false, p)
+    case Clo(params, body, env) => (false, "<lambda>")
+    case Evalfun(i) => (false, "<evalfun"+i+">")
+    case Cont(i) => (false, "<cont"+i+">")
+    case Cell(key) => pp(cells(key))
+    case Code(c) => (false, "{"+c+"}")
+  }
+  def display(v: Value) = println(addParen(pp(v)))
 
   def top_eval[R[_]:Ops](exp: Value): R[Value] = {
     try {
