@@ -142,7 +142,7 @@ class TestEvaluator extends TestSuite {
                 A(S("old_eval_var"), List(S("e"), S("r"), S("k")))))))),
             L(false, List(), S("counter"))))),
             List(I(0), S("eval_var"))),
-          L(false, List(), A(A(Y(true), List(fib(false))), List(I(7))))))
+          L(false, List(), A(A(Y(true), List(fib(true))), List(I(7))))))
       }
     )
     //}

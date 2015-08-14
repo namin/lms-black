@@ -248,13 +248,8 @@ object eval {
       val vf = env_get(env, S("eval_var")) match {
         case v@Cell(_) => cell_read(v)
       }
-      try {
-        if (inRep)
-          static_apply[R](vf, P(exp, P(env, P(mkCont[R]{x => x}, N))), env, cont)
-        else static_apply[R](vf, P(exp, P(env, P(cont, N))), env, mkCont[R]{x => x})
-      } finally {
-        inEvalVar = false
-      }
+      static_apply[R](vf, P(exp, P(env, P(mkCont[R]{v => inEvalVar = false; v}, N))),
+        env, cont)
     }
   }
 
