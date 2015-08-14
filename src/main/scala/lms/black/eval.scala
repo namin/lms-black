@@ -8,14 +8,7 @@ object eval {
     override def toString = "S(\""+sym+"\")"
   }
   case object N extends Value
-  case class _P(car_key: Int, cdr_key: Int) extends Value
-  object P {
-    def apply(car: Value, cdr: Value) = _P(addCell(car), addCell(cdr))
-    def unapply(v: Value): Option[(Value, Value)] = v match {
-      case _P(a, d) => Some(cells(a), cells(d))
-      case _ => None
-    }
-  }
+  case class P(car: Value, cdr: Value) extends Value
   case class Prim(p: String) extends Value {
     override def toString = "Prim(\""+p+"\")"
   }
@@ -24,12 +17,6 @@ object eval {
   case class Code[R[_]](c: R[Value]) extends Value
   case class Cont(key: Int) extends Value
 
-  var cells = Map[Int, Value]()
-  def addCell(v: Value): Int = {
-    val key = cells.size
-    cells += (key -> v)
-    key
-  }
   abstract class Fun[W[_]:Ops] extends Serializable {
     def fun[R[_]:Ops]: W[Value] => R[Value]
   }
@@ -49,7 +36,6 @@ object eval {
     key
   }
   def reset() {
-    cells = cells.empty
     funs = funs.empty
     conts = conts.empty
   }
@@ -64,12 +50,6 @@ object eval {
   }
   def cdr(v: Value) = v match {
     case P(a, d) => d
-  }
-  def set_car(p: Value, v: Value) = p match {
-    case _P(key, _) => cells += (key -> v)
-  }
-  def set_cdr(p: Value, v: Value) = p match {
-    case _P(_, key) => cells += (key -> v)
   }
 
   def apply_cont[R[_]:Ops](cont: Value, v: R[Value]): R[Value] = cont match {
@@ -87,9 +67,6 @@ object eval {
     def makePair(car: R[Value], cdr: R[Value]): R[Value]
     def getCar(p: R[Value]): R[Value]
     def getCdr(p: R[Value]): R[Value]
-    def setCar(p: R[Value], v: R[Value]): R[Unit]
-    def setCdr(p: R[Value], v: R[Value]): R[Unit]
-    def envUpdatePair(env: R[Value], name: R[Value]): R[Value]
     def inRep: Boolean
   }
 
@@ -112,20 +89,6 @@ object eval {
     def makePair(car: Value, cdr: Value) = cons(car, cdr)
     def getCar(p: Value) = car(p)
     def getCdr(p: Value) = cdr(p)
-    def setCar(p: Value, v: Value) = set_car(p, v)
-    def setCdr(p: Value, v: Value) = set_cdr(p, v)
-    def envUpdatePair(env: Value, name: Value) = {
-      env_get_pair(env, name) match {
-        case Some(p) => p
-        case None =>
-          env match {
-            case P(frame, _) =>
-              val p = cons(name, S("undefined"))
-              set_car(env, cons(p, frame))
-              p
-          }
-      }
-    }
     def inRep = false
   }
 
@@ -198,15 +161,6 @@ object eval {
             base_eval[R](thenp, env, cont),
             base_eval[R](elsep, env, cont))
         }))
-      case P(S("set!"), _) =>
-        val (name, body) = exp match {
-          case P(_, P(name, P(body, N))) => (name, body)
-        }
-        base_eval[R](body, env, mkCont[R]{ v =>
-          val p = envUpdatePair(env, name)
-          setCdr(p, v)
-          apply_cont(cont, name)
-        })
       case P(S("begin"), body) => eval_begin[R](body, env, cont)
       case P(k@S("hack"), _) =>
         env_get(env, k) match {
@@ -312,9 +266,6 @@ trait EvalDsl extends Functions with TupleOps with IfThenElse with Equal with Un
       unchecked("makePair(", car, ", ", cdr, ")")
     def getCar(p: Rep[Value]) = unchecked("car(", p, ")")
     def getCdr(p: Rep[Value]) = unchecked("cdr(", p, ")")
-    def setCar(p: Rep[Value], v: Rep[Value]) = unchecked("setCar(", p, ", ", v, ")")
-    def setCdr(p: Rep[Value], v: Rep[Value]) = unchecked("setCdr(", p, ", ", v, ")")
-    def envUpdatePair(env: Rep[Value], name: Rep[Value]) = unchecked("envUpdatePair(", env, ", ", name, ")")
     def inRep = true
   }
 
@@ -354,12 +305,8 @@ trait EvalDslGen extends ScalaGenFunctions with ScalaGenTupleOps with ScalaGenIf
     case _ => false
   }
   override def quote(x: Exp[Any]) : String = x match {
-    case Const(P(a, b)) if hasCode(a) || hasCode(b) =>
-      "P("+quote(Const(a))+", "+quote(Const(b))+")"
-    case Const(Code(c)) => c match {
-      case Def(Field(x, s)) => quote(x)+"."+s
-      case _ => quote(c.asInstanceOf[Rep[Any]])
-    }
+    case Const(P(a, b)) => "P("+quote(Const(a))+", "+quote(Const(b))+")"
+    case Const(Code(c)) => quote(c.asInstanceOf[Rep[Any]])
     case Const(Clo(param, body, env)) =>  "Clo(\""+quote(Const(param))+"\", "+quote(Const(body))+", "+quote(Const(env))+")"
     case _ => super.quote(x)
   }

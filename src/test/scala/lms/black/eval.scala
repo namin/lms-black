@@ -83,6 +83,7 @@ class TestEvaluator extends TestSuite {
     }
   }
 
+  /*
   def counter(c: Boolean) = L(c, "c", A(S("begin"),
     List(
       A(S("set!"), List(S("c"), A(S("+"), List(S("c"), I(1))))),
@@ -123,4 +124,5 @@ class TestEvaluator extends TestSuite {
       top_eval[NoRep](A(counter2(true), List(I(0))))
     }
   }
+   */
 }
