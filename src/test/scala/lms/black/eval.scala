@@ -105,4 +105,28 @@ class TestEvaluator extends TestSuite {
       top_eval[NoRep](A(counter(true), List(A(S("cell_new"), List(I(0))))))
     }
   }
+
+  def counter2(c: Boolean) = L(c, "c", A(S("begin"),
+    List(
+      A(S("set!"), List(S("c"), A(S("+"),
+        List(S("c"), I(1))))),
+      A(S("set!"), List(S("c"), A(S("+"),
+        List(S("c"), I(1))))),
+      A(S("set!"), List(S("c"), A(S("+"),
+        List(S("c"), I(1))))),
+      S("c")
+    )))
+
+  test ("counter2 evaluated") {
+    assertResult(I(3)){
+      top_eval[NoRep](A(counter2(false), List(I(0))))
+    }
+  }
+
+  test ("counter2 compiled") {
+    assertResult(I(3)){
+      top_eval[NoRep](A(counter2(true), List(I(0))))
+    }
+  }
+
 }

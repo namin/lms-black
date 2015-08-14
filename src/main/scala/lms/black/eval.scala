@@ -184,6 +184,15 @@ object eval {
             base_eval[R](elsep, env, cont))
         }))
       case P(S("begin"), body) => eval_begin[R](body, env, cont)
+      case P(S("set!"), _) =>
+        val (name, body) = exp match {
+          case P(_, P(name, P(body, N))) => (name, body)
+        }
+        base_eval[R](body, env, mkCont[R]({ v =>
+          val p = env_get(env, name)
+          cellSet(lift(p), v)
+          apply_cont(cont, name)
+        }))
       case P(k@S("hack"), _) =>
         cell_read(env_get(env, k)) match {
           case Evalfun(key) =>
@@ -296,7 +305,7 @@ trait EvalDsl extends Functions with TupleOps with IfThenElse with Equal with Un
     def getCdr(p: Rep[Value]) = unchecked("cdr(", p, ")")
     def cellNew(v: Rep[Value]) = unchecked("cell_new(", v, ")")
     def cellRead(c: Rep[Value]) = unchecked("cell_read(", c, ")")
-    def cellSet(c: Rep[Value], v: Rep[Value]) = unchecked("cell_set(", c, ", ", v, ")")
+    def cellSet(c: Rep[Value], v: Rep[Value]) = unchecked("cellSet(", c, ", ", v, ")")
     def inRep = true
   }
 
