@@ -201,6 +201,7 @@ object eval {
       }))
     }
   }
+
   def eval_begin[R[_]:Ops](body: Value, env: Value, cont: Value): R[Value] =
     body match {
       case P(exp, N) => base_eval[R](exp, env, cont)
@@ -208,6 +209,13 @@ object eval {
         eval_begin[R](rest, env, cont)
       })
     }
+
+  def eval_var_fun: Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops] = { (vc: Value) =>
+      val P(exp, P(env, P(cont, N))) = vc
+      eval_var[R](exp, env, cont)
+    }
+  }
   def eval_var[R[_]:Ops](exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     env_get(env, exp) match {
@@ -257,6 +265,7 @@ object eval {
   }
 
   def init_frame = list_to_value(List(
+    P(S("eval_var"), cell_new(evalfun(eval_var_fun))),
     P(S("base_eval"), evalfun(base_eval_fun)),
     P(S("<"), Prim("<")),
     P(S("+"), Prim("+")),
