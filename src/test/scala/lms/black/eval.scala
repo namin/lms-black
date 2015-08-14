@@ -55,9 +55,11 @@ class TestEvaluator extends TestSuite {
   }
 
   test ("sum of fibs compiled") {
+    //checkOut("sumf", "scala",
     assertResult(I(33)){
-      // changing the first false to true result in SO
-      top_eval[NoRep](A(A(Y(false), List(A(sumf(true), List(A(Y(true), List(fib(true))))))), List(I(7))))}
+      top_eval[NoRep](A(A(Y(true), List(A(sumf(true), List(A(Y(true), List(fib(true))))))), List(I(7))))
+    }
+    //)
   }
 
   test ("hack") {

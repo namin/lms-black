@@ -247,11 +247,14 @@ object eval {
     if (inEvalVar) eval_var[R](exp, env, cont) else {
       inEvalVar = true
       val o = implicitly[Ops[R]]; import o._
-      val vf = env_get(env, S("eval_var")) match {
+      val fun = env_get(env, S("eval_var")) match {
         case v@Cell(_) => cell_read(v)
       }
-      static_apply[R](vf, P(exp, P(env, P(mkCont[R]{v => inEvalVar = false; v}, N))),
-        env, cont)
+      val k = mkCont[R]{v => inEvalVar = false; apply_cont(cont, v)}
+      val kid = mkCont[R]{v => v}
+      val (kargs, kout) = if (inRep) (kid, k) else (k, kid)
+      val args = P(exp, P(env, P(kargs, N)))
+      static_apply[R](fun, args, env, kout)
     }
   }
 
@@ -382,7 +385,7 @@ trait EvalDsl extends Functions with TupleOps with IfThenElse with Equal with Un
   def snippet(v: Rep[Value]): Rep[Value]
 }
 
-trait EvalDslExp extends EvalDsl with EffectExp with FunctionsRecursiveExp with TupleOpsExp with IfThenElseExp with EqualExp with UncheckedOpsExp {
+trait EvalDslExp extends EvalDsl with EffectExp with FunctionsExp with TupleOpsExp with IfThenElseExp with EqualExp with UncheckedOpsExp {
   case class BaseApplyRep(f: Rep[Value], args: Rep[Value], env: Value, cont: Rep[Value => Value]) extends Def[Value]
   def base_apply_rep(f: Rep[Value], args: Rep[Value], env: Value, cont: Value): Rep[Value] = cont match {
     case Cont(key) => reflectEffect(BaseApplyRep(f, args, env, fun(conts(key).fun[Rep])))
@@ -492,7 +495,7 @@ trait EvalDslImpl extends EvalDslExp { q =>
 abstract class EvalDslDriver extends EvalDsl with EvalDslImpl with CompileScala {
   dumpGeneratedCode = true
   lazy val f = compile(snippet).asInstanceOf[Fun[NoRep]]
-  def precompile: Unit = { print("// "); f }
+  def precompile: Unit = f
   def precompileSilently: Unit = utils.devnull(f)
   def eval[R[_]:Ops](v: Value): R[Value] = {
     val fn = f.fun[R]
