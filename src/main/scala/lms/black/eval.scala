@@ -82,6 +82,9 @@ object eval {
     def makePair(car: R[Value], cdr: R[Value]): R[Value]
     def getCar(p: R[Value]): R[Value]
     def getCdr(p: R[Value]): R[Value]
+    def cellNew(v: R[Value]): R[Value]
+    def cellRead(c: R[Value]): R[Value]
+    def cellSet(c: R[Value], v: R[Value]): R[Value]
     def inRep: Boolean
   }
 
@@ -104,6 +107,9 @@ object eval {
     def makePair(car: Value, cdr: Value) = cons(car, cdr)
     def getCar(p: Value) = car(p)
     def getCdr(p: Value) = cdr(p)
+    def cellNew(v: Value) = cell_new(v)
+    def cellRead(c: Value) = cell_read(c)
+    def cellSet(c: Value, v: Value) = cell_set(c, v)
     def inRep = false
   }
 
@@ -136,7 +142,8 @@ object eval {
       case e@I(n) => apply_cont[R](cont, lift(e))
       case e@B(b) => apply_cont[R](cont, lift(e))
       case e@S(sym) => env_get(env, e) match {
-        case Code(v: R[Value]) => apply_cont[R](cont, v)
+        case Code(v: R[Value]) => apply_cont[R](cont, cellRead(v))
+        case v@Cell(_) => apply_cont[R](cont, cellRead(v))
         case v => apply_cont(cont, lift(v))
       }
       case P(S("lambda"), _) =>
@@ -178,7 +185,7 @@ object eval {
         }))
       case P(S("begin"), body) => eval_begin[R](body, env, cont)
       case P(k@S("hack"), _) =>
-        env_get(env, k) match {
+        cell_read(env_get(env, k)) match {
           case Evalfun(key) =>
             val f = funs(key).fun[R]
             f(P(exp, P(env, P(cont, N))))
@@ -203,11 +210,11 @@ object eval {
   def make_pairs[R[_]:Ops](ks: Value, vs: Value): Value = (ks, vs) match {
     case (N, N) => N
     case (N, Code(_)) => N
-    case (S(s), _) => cons(cons(ks, vs), N)
-    case (P(k, ks), P(v, vs)) => cons(cons(k, v), make_pairs[R](ks, vs))
+    //case (S(s), _) => cons(cons(ks, vs), N)
+    case (P(k, ks), P(v, vs)) => cons(cons(k, cell_new(v)), make_pairs[R](ks, vs))
     case (P(k, ks), Code(c : R[Value])) =>
       val o = implicitly[Ops[R]]
-      cons(cons(k, Code(o.getCar(c))), make_pairs[R](ks, Code(o.getCdr(c))))
+      cons(cons(k, Code(o.cellNew(o.getCar(c)))), make_pairs[R](ks, Code(o.getCdr(c))))
   }
   def env_get_pair(env: Value, key: Value): Option[Value] = env match {
     case P(frame, r) => frame_get(frame, key) match {
@@ -287,6 +294,9 @@ trait EvalDsl extends Functions with TupleOps with IfThenElse with Equal with Un
       unchecked("makePair(", car, ", ", cdr, ")")
     def getCar(p: Rep[Value]) = unchecked("car(", p, ")")
     def getCdr(p: Rep[Value]) = unchecked("cdr(", p, ")")
+    def cellNew(v: Rep[Value]) = unchecked("cell_new(", v, ")")
+    def cellRead(c: Rep[Value]) = unchecked("cell_read(", c, ")")
+    def cellSet(c: Rep[Value], v: Rep[Value]) = unchecked("cell_set(", c, ", ", v, ")")
     def inRep = true
   }
 
