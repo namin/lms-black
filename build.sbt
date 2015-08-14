@@ -21,3 +21,5 @@ libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.2" % "test"
 scalacOptions += "-Yvirtualize"
 
 scalacOptions += "-deprecation"
+
+parallelExecution in Test := false

@@ -66,7 +66,7 @@ class TestEvaluator extends TestSuite {
     assertResult(I(0)){
       top_eval[NoRep](A(L(false, "hack", A(S("hack"), List(I(0), A(S("cdr"), List(I(0)))))),
         List(L(true, List("exp", "env", "cont"),
-          A(S("base_eval"),
+          A(S("base-eval"),
             List(A(S("car"), List(A(S("cdr"), List(S("exp"))))),
               S("env"), S("cont")))))))
     }
@@ -79,7 +79,7 @@ class TestEvaluator extends TestSuite {
           A(S("hack"), List(S("n"), A(S("cdr"), List(S("n")))))),
           List(I(0)))),
         List(L(true, List("exp", "env", "cont"),
-          A(S("base_eval"),
+          A(S("base-eval"),
             List(A(S("car"), List(A(S("cdr"), List(S("exp"))))),
               S("env"), S("cont")))))))
     }
@@ -138,12 +138,12 @@ class TestEvaluator extends TestSuite {
         A(L(false, List("counter_thunk", "thunk"), A(S("begin"), List(
           A(S("thunk"), List()), A(S("counter_thunk"), List())))), List(
           A(L(false, List("counter", "old_eval_var"), A(S("begin"), List(
-            A(S("set!"), List(S("eval_var"), L(true, List("e", "r", "k"),
+            A(S("set!"), List(S("eval-var"), L(true, List("e", "r", "k"),
               A(S("begin"), List(
                 A(S("set!"), List(S("counter"), A(S("+"), List(S("counter"), I(1))))),
                 A(S("old_eval_var"), List(S("e"), S("r"), S("k")))))))),
             L(false, List(), S("counter"))))),
-            List(I(0), S("eval_var"))),
+            List(I(0), S("eval-var"))),
           L(false, List(), A(A(Y(true), List(fib(true))), List(I(7))))))
       }
     )

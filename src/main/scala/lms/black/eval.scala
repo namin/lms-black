@@ -93,7 +93,7 @@ object eval {
     val o = implicitly[Ops[R]]; import o._
     fun match {
       case Clo(params, body, cenv) =>
-        base_eval[R](body, env_extend[R](cenv, params, args), cont)
+        eval_begin[R](body, env_extend[R](cenv, params, args), cont)
       case Evalfun(key) =>
         val f = funs(key).fun[R]
         apply_cont[R](cont, f(args))
@@ -150,17 +150,17 @@ object eval {
       case S(sym) => meta_eval_var[R](exp, env, cont)
       case P(S("lambda"), _) =>
         val (params, body) = exp match {
-          case P(_, P(params, P(body, N))) => (params, body)
+          case P(_, P(params, body)) => (params, body)
         }
         apply_cont(cont, lift(Clo(params, body, env)))
       case P(S("clambda"), _) =>
         val (params, body) = exp match {
-          case P(_, P(params, P(body, N))) => (params, body)
+          case P(_, P(params, body)) => (params, body)
         }
         if (!inRep) {
           trait Program extends EvalDsl {
             def snippet(v: Rep[Value]): Rep[Value] = {
-              base_eval[Rep](body,
+              eval_begin[Rep](body,
                 env_extend[Rep](env, params, Code(v))(OpsRep),
                 mkCont[Rep](x => x)(OpsRep))(OpsRep)
             }
@@ -171,7 +171,7 @@ object eval {
         } else {
           val f = makeFun(new Fun[R] {
             def fun[RF[_]:Ops] = {(v: R[Value]) =>
-              base_eval[RF](body, env_extend[RF](env, params, Code(v)), mkCont[RF](x => x))
+              eval_begin[RF](body, env_extend[RF](env, params, Code(v)), mkCont[RF](x => x))
             }
           })
           apply_cont(cont, f)
@@ -206,6 +206,11 @@ object eval {
           cellSet(lift(c), makePair(makePair(name, cellNew(v)), frame))
           apply_cont(cont, name)
         }))
+      case P(S("quote"), _) =>
+        val e = exp match {
+          case P(_, P(e, N)) => e
+        }
+        apply_cont(cont, e)
       case P(k@S("hack"), _) =>
         cell_read(env_get(env, k)) match {
           case Evalfun(key) =>
@@ -247,7 +252,7 @@ object eval {
     if (inEvalVar) eval_var[R](exp, env, cont) else {
       inEvalVar = true
       val o = implicitly[Ops[R]]; import o._
-      val fun = env_get(env, S("eval_var")) match {
+      val fun = env_get(env, S("eval-var")) match {
         case v@Cell(_) => cell_read(v)
       }
       val k = mkCont[R]{v => inEvalVar = false; apply_cont(cont, v)}
@@ -305,8 +310,8 @@ object eval {
   }
 
   def init_frame = list_to_value(List(
-    P(S("eval_var"), cell_new(evalfun(eval_var_fun))),
-    P(S("base_eval"), evalfun(base_eval_fun)),
+    P(S("eval-var"), cell_new(evalfun(eval_var_fun))),
+    P(S("base-eval"), evalfun(base_eval_fun)),
     P(S("<"), Prim("<")),
     P(S("+"), Prim("+")),
     P(S("-"), Prim("-")),

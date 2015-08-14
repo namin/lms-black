@@ -8,7 +8,8 @@ object parser extends JavaTokenParsers with PackratParsers {
       "#f" ^^ { case _ => B(false) } |
       "#t" ^^ { case _ => B(true) } |
       "[0-9]+".r ^^ { case s => I(s.toInt) } |
-      """[^\s\(\)]+""".r ^^ { case s => S(s) } |
+      """[^\s\(\)']+""".r ^^ { case s => S(s) } |
+      "'" ~> exp ^^ { case s => P(S("quote"), P(s, N)) } |
       "()" ^^ { case _ => N } |
       "(" ~> exps <~ ")" ^^ { case vs => vs }
 

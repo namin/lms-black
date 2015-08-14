@@ -5,9 +5,13 @@ import parser._
 
 object repl {
   def idcont = mkCont[NoRep]{x => x}
-  val global_env = init_env
+  var global_env = init_env
   def ev(s: String) = {
     val Success(e, _) = parseAll(exp, s)
     base_eval[NoRep](e, global_env, idcont)
+  }
+  def clean() = {
+    reset()
+    global_env = init_env
   }
 }
