@@ -254,7 +254,7 @@ object eval {
   }
 
   def env_extend[R[_]:Ops](env: Value, params: Value, args: Value) =
-    cons(cell_new(make_pairs[R](params, args)), env)
+    cons(make_pairs[R](params, args), env)
   def make_pairs[R[_]:Ops](ks: Value, vs: Value): Value = (ks, vs) match {
     case (N, N) => N
     case (N, Code(_)) => N
@@ -265,10 +265,15 @@ object eval {
       cons(cons(k, Code(o.cellNew(o.getCar(c)))), make_pairs[R](ks, Code(o.getCdr(c))))
   }
   def env_get_pair(env: Value, key: Value): Option[Value] = env match {
-    case P(Cell(k), r) => frame_get(cells(k), key) match {
-      case res@Some(p) => res
-      case None => env_get_pair(r, key)
-    }
+    case P(f, r) =>
+      val frame = f match {
+        case Cell(k) => cells(k)
+        case f => f
+      }
+      frame_get(frame, key) match {
+        case res@Some(p) => res
+        case None => env_get_pair(r, key)
+      }
     case _ => None
   }
   def env_get(env: Value, key: Value): Value = env_get_pair(env, key) match {
