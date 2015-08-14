@@ -217,11 +217,7 @@ object eval {
             val f = funs(key).fun[R]
             f(P(exp, P(env, P(cont, N))))
         }
-      case P(fun, args) => base_eval[R](fun, env, mkCont[R]({ v =>
-        base_evlist[R](args, env, mkCont[R]({ vs =>
-          base_apply[R](v, vs, env, cont)
-        }))
-      }))
+      case P(fun, args) => meta_apply[R](S("eval-application"), exp, env, cont)
     }
   }
 
@@ -232,6 +228,22 @@ object eval {
         eval_begin[R](rest, env, cont)
       })
     }
+
+  def eval_application_fun: Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops] = { (vc: Value) =>
+      val P(exp, P(env, P(cont, N))) = vc
+      eval_application[R](exp, env, cont)
+    }
+  }
+  def eval_application[R[_]:Ops](exp: Value, env: Value, cont: Value): R[Value] = {
+    val o = implicitly[Ops[R]]; import o._
+    val P(fun, args) = exp
+    base_eval[R](fun, env, mkCont[R]({ v =>
+      base_evlist[R](args, env, mkCont[R]({ vs =>
+        base_apply[R](v, vs, env, cont)
+      }))
+    }))
+  }
 
   def eval_var_fun: Fun[NoRep] = new Fun[NoRep] {
     def fun[R[_]:Ops] = { (vc: Value) =>
@@ -310,6 +322,7 @@ object eval {
   }
 
   def init_frame = list_to_value(List(
+    P(S("eval-application"), cell_new(evalfun(eval_application_fun))),
     P(S("eval-var"), cell_new(evalfun(eval_var_fun))),
     P(S("base-eval"), evalfun(base_eval_fun)),
     P(S("<"), Prim("<")),
