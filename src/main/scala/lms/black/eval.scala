@@ -359,7 +359,7 @@ trait EvalDslGen extends ScalaGenFunctions with ScalaGenTupleOps with ScalaGenIf
   override def quote(x: Exp[Any]) : String = x match {
     case Const(P(a, b)) => "P("+quote(Const(a))+", "+quote(Const(b))+")"
     case Const(Code(c)) => quote(c.asInstanceOf[Rep[Any]])
-    case Const(Clo(param, body, env)) =>  "Clo(\""+quote(Const(param))+"\", "+quote(Const(body))+", "+quote(Const(env))+")"
+    case Const(Clo(param, body, env)) =>  "Clo("+quote(Const(param))+", "+quote(Const(body))+", "+quote(Const(env))+")"
     case _ => super.quote(x)
   }
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
