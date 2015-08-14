@@ -242,7 +242,6 @@ object eval {
   }
   def meta_eval_var[R[_]:Ops](exp: Value, env: Value, cont: Value): R[Value] = {
     eval_var[R](exp, env, cont)
-    /*
     val o = implicitly[Ops[R]]; import o._
     val vf = env_get(env, S("eval_var")) match {
       case v@Cell(_) => cell_read(v)
@@ -250,7 +249,6 @@ object eval {
     if (inRep)
       static_apply[R](vf, P(exp, P(env, P(mkCont[R]{x => x}, N))), env, cont)
     else static_apply[R](vf, P(exp, P(env, P(cont, N))), env, mkCont[R]{x => x})
-     */
   }
 
   def env_extend[R[_]:Ops](env: Value, params: Value, args: Value) =
