@@ -87,20 +87,23 @@ object eval {
     def cellSet(c: R[Value], v: R[Value]): R[Value]
     def inRep: Boolean
   }
-
+  def static_apply[R[_]:Ops](fun: Value, args: Value, env: Value, cont: Value) = {
+    val o = implicitly[Ops[R]]; import o._
+    fun match {
+      case Clo(params, body, cenv) =>
+        base_eval[R](body, env_extend[R](cenv, params, args), cont)
+      case Evalfun(key) =>
+        val f = funs(key).fun[R]
+        apply_cont[R](cont, f(args))
+      case Prim(p) =>
+        apply_cont[R](cont, apply_primitive(p, args))
+    }
+  }
   type NoRep[A] = A
   implicit object OpsNoRep extends Ops[NoRep] {
     def lift(v: Value) = v
     def app(fun: Value, args: Value, env: Value, cont: Value) =
-      fun match {
-        case Clo(params, body, cenv) =>
-          base_eval[NoRep](body, env_extend[NoRep](cenv, params, args), cont)
-        case Evalfun(key) =>
-          val f = funs(key).fun[NoRep]
-          apply_cont[NoRep](cont, f(args))
-        case Prim(p) =>
-          apply_cont[NoRep](cont, apply_primitive(p, args))
-      }
+      static_apply[NoRep](fun, args, env, cont)
     def isTrue(v: Value) = B(false)!=v
     def ifThenElse[A:Manifest](cond: Boolean, thenp: => A, elsep: => A): A = if (cond) thenp else elsep
     def makeFun(f: Fun[NoRep]) = evalfun(f)
@@ -140,7 +143,7 @@ object eval {
     val o = implicitly[Ops[R]]; import o._
     exp match {
       case I(_) | B(_) => apply_cont[R](cont, lift(exp))
-      case S(sym) => eval_var[R](exp, env, cont)
+      case S(sym) => meta_eval_var[R](exp, env, cont)
       case P(S("lambda"), _) =>
         val (params, body) = exp match {
           case P(_, P(params, P(body, N))) => (params, body)
@@ -212,6 +215,7 @@ object eval {
 
   def eval_var_fun: Fun[NoRep] = new Fun[NoRep] {
     def fun[R[_]:Ops] = { (vc: Value) =>
+      println(vc)
       val P(exp, P(env, P(cont, N))) = vc
       eval_var[R](exp, env, cont)
     }
@@ -219,9 +223,16 @@ object eval {
   def eval_var[R[_]:Ops](exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     env_get(env, exp) match {
-      case Code(v: R[Value]) => apply_cont[R](cont, cellRead(v))
+      case Code(v) if o.inRep => apply_cont[R](cont, cellRead(v.asInstanceOf[R[Value]]))
       case v@Cell(_) => apply_cont[R](cont, cellRead(v))
       case v => apply_cont(cont, lift(v))
+    }
+  }
+  def meta_eval_var[R[_]:Ops](exp: Value, env: Value, cont: Value): R[Value] = {
+    val o = implicitly[Ops[R]]; import o._
+    if (exp!=S("n")) eval_var[R](exp, env, cont) else {
+      val vf = eval_var[NoRep](S("eval_var"), env, mkCont[NoRep]{v => v})
+      static_apply[R](vf, P(exp, P(env, P(cont, N))), env, mkCont[R]{v => v})
     }
   }
 

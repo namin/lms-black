@@ -129,4 +129,22 @@ class TestEvaluator extends TestSuite {
     }
   }
 
+  test ("problem") {
+    //assertResult(I(13)){
+    println(
+      top_eval[NoRep]{
+        A(L(false, List("counter_thunk", "thunk"), A(S("begin"), List(
+          A(S("thunk"), List()), A(S("counter_thunk"), List())))), List(
+          A(L(false, List("counter", "old_eval_var"), A(S("begin"), List(
+            A(S("set!"), List(S("eval_var"), L(false, List("e", "r", "k"),
+              A(S("begin"), List(
+                A(S("set!"), List(S("counter"), A(S("+"), List(S("counter"), I(1))))),
+                A(S("old_eval_var"), List(S("e"), S("r"), S("k")))))))),
+            L(false, List(), S("counter"))))),
+            List(I(0), S("eval_var"))),
+          L(false, List(), A(A(Y(true), List(fib(true))), List(I(7))))))
+      }
+    )
+    //}
+  }
 }
