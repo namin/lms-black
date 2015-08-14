@@ -288,6 +288,7 @@ object eval {
     case ("cell_new", P(v, N)) => cell_new(v)
     case ("cell_read", P(c, N)) => cell_read(c)
     case ("cell_set!", P(c, P(v, N))) => cell_set(c, v)
+    case ("eq?", P(a, P(b, N))) => B(a==b)
   }
 
   def init_frame = list_to_value(List(
@@ -301,7 +302,8 @@ object eval {
     P(S("cons"), Prim("cons")),
     P(S("cell_new"), Prim("cell_new")),
     P(S("cell_read"), Prim("cell_read")),
-    P(S("cell_set!"), Prim("cell_set!"))
+    P(S("cell_set!"), Prim("cell_set!")),
+    P(S("eq?"), Prim("eq?"))
   ))
   def init_env = cons(Cell(addCell(init_frame)), N)
 
