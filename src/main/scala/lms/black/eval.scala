@@ -259,6 +259,8 @@ object eval {
       case v => apply_cont(cont, lift(v))
     }
   }
+  // this inEval scheme makes no sene for app...
+  // time for a tower
   var inEval = Set[Value]()
   def meta_apply[R[_]:Ops](s: Value, exp: Value, env: Value, cont: Value): R[Value] = {
     if (inEval.contains(s)) s match {
