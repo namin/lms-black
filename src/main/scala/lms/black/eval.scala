@@ -147,7 +147,7 @@ object eval {
     val o = implicitly[Ops[R]]; import o._
     exp match {
       case I(_) | B(_) => apply_cont[R](cont, lift(exp))
-      case S(sym) => meta_eval_var[R](exp, env, cont)
+      case S(sym) => meta_apply[R](S("eval-var"), exp, env, cont)
       case P(S("lambda"), _) =>
         val (params, body) = exp match {
           case P(_, P(params, body)) => (params, body)
@@ -247,15 +247,15 @@ object eval {
       case v => apply_cont(cont, lift(v))
     }
   }
-  var inEvalVar = false
-  def meta_eval_var[R[_]:Ops](exp: Value, env: Value, cont: Value): R[Value] = {
-    if (inEvalVar) eval_var[R](exp, env, cont) else {
-      inEvalVar = true
+  var inEval = Set[Value]()
+  def meta_apply[R[_]:Ops](s: Value, exp: Value, env: Value, cont: Value): R[Value] = {
+    if (inEval.contains(s)) eval_var[R](exp, env, cont) else {
+      inEval += exp
       val o = implicitly[Ops[R]]; import o._
-      val fun = env_get(env, S("eval-var")) match {
+      val fun = env_get(env, s) match {
         case v@Cell(_) => cell_read(v)
       }
-      val k = mkCont[R]{v => inEvalVar = false; apply_cont(cont, v)}
+      val k = mkCont[R]{v => inEval -= s; apply_cont(cont, v)}
       val kid = mkCont[R]{v => v}
       val (kargs, kout) = if (inRep) (kid, k) else (k, kid)
       val args = P(exp, P(env, P(kargs, N)))
