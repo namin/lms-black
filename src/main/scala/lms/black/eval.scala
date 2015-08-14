@@ -261,7 +261,10 @@ object eval {
   }
   var inEval = Set[Value]()
   def meta_apply[R[_]:Ops](s: Value, exp: Value, env: Value, cont: Value): R[Value] = {
-    if (inEval.contains(s)) eval_var[R](exp, env, cont) else {
+    if (inEval.contains(s)) s match {
+      case S("eval-var") => eval_var[R](exp, env, cont)
+      case S("eval-application") => eval_application[R](exp, env, cont)
+    } else {
       inEval += exp
       val o = implicitly[Ops[R]]; import o._
       val fun = env_get(env, s) match {

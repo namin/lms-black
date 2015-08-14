@@ -12,7 +12,7 @@ class TestRepl extends TestSuite with BeforeAndAfter {
     clean()
   }
 
-  test("counter") {
+  test("var counter") {
     ev("(define counter 0)")
     ev("(define old-eval-var eval-var)")
     ev("""(set! eval-var (clambda (e r k)
