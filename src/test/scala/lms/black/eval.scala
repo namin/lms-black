@@ -53,12 +53,12 @@ class TestEvaluator extends TestSuite {
     assertResult(I(33)){
       top_eval[NoRep](A(A(Y(false), List(A(sumf(false), List(A(Y(false), List(fib(false))))))), List(I(7))))}
   }
-
+/*
   test ("sum of fibs compiled") {
     assertResult(I(33)){
       top_eval[NoRep](A(A(Y(true), List(A(sumf(true), List(A(Y(true), List(fib(true))))))), List(I(7))))}
   }
-
+*/
   test ("hack") {
     assertResult(I(0)){
       top_eval[NoRep](A(L(false, "hack", A(S("hack"), List(I(0), A(S("cdr"), List(I(0)))))),
@@ -136,13 +136,13 @@ class TestEvaluator extends TestSuite {
         A(L(false, List("counter_thunk", "thunk"), A(S("begin"), List(
           A(S("thunk"), List()), A(S("counter_thunk"), List())))), List(
           A(L(false, List("counter", "old_eval_var"), A(S("begin"), List(
-            A(S("set!"), List(S("eval_var"), L(false, List("e", "r", "k"),
+            A(S("set!"), List(S("eval_var"), L(true, List("e", "r", "k"),
               A(S("begin"), List(
                 A(S("set!"), List(S("counter"), A(S("+"), List(S("counter"), I(1))))),
                 A(S("old_eval_var"), List(S("e"), S("r"), S("k")))))))),
             L(false, List(), S("counter"))))),
             List(I(0), S("eval_var"))),
-          L(false, List(), A(A(Y(true), List(fib(true))), List(I(7))))))
+          L(false, List(), A(A(Y(true), List(fib(false))), List(I(7))))))
       }
     )
     //}

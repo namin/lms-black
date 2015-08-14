@@ -25,11 +25,13 @@ object eval {
     key
   }
   def cell_new(v: Value) = Cell(addCell(v))
-  def cell_read(c: Value) = c match {
+  def cell_read(c: Value): Value = c match {
     case Cell(key) => cells(key)
+    case Code(cc) => cell_read(cc.asInstanceOf[Value])
   }
-  def cell_set(c: Value, v: Value) = c match {
+  def cell_set(c: Value, v: Value): Value = c match {
     case Cell(key) => cells += (key -> v); v
+    case Code(cc) => cell_set(cc.asInstanceOf[Value], v)
   }
   abstract class Fun[W[_]:Ops] extends Serializable {
     def fun[R[_]:Ops]: W[Value] => R[Value]
@@ -55,7 +57,7 @@ object eval {
     cells = cells.empty
   }
   def evalfun(f: Fun[NoRep]) = Evalfun(addFun(f))
-  def mkCont[R[_]:Ops](f: R[Value] => R[Value]) = Cont(addCont(new FunC {
+  def mkCont[R[_]:Ops](f: R[Value] => R[Value]): Value = Cont(addCont(new FunC {
     def fun[R[_]:Ops] = f.asInstanceOf[R[Value] => R[Value]]
   }))
 
@@ -215,7 +217,6 @@ object eval {
 
   def eval_var_fun: Fun[NoRep] = new Fun[NoRep] {
     def fun[R[_]:Ops] = { (vc: Value) =>
-      println(vc)
       val P(exp, P(env, P(cont, N))) = vc
       eval_var[R](exp, env, cont)
     }
@@ -223,17 +224,19 @@ object eval {
   def eval_var[R[_]:Ops](exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     env_get(env, exp) match {
-      case Code(v) if o.inRep => apply_cont[R](cont, cellRead(v.asInstanceOf[R[Value]]))
+      case Code(v: R[Value]) => apply_cont[R](cont, cellRead(v))
       case v@Cell(_) => apply_cont[R](cont, cellRead(v))
       case v => apply_cont(cont, lift(v))
     }
   }
   def meta_eval_var[R[_]:Ops](exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
-    if (exp!=S("n")) eval_var[R](exp, env, cont) else {
-      val vf = eval_var[NoRep](S("eval_var"), env, mkCont[NoRep]{v => v})
-      static_apply[R](vf, P(exp, P(env, P(cont, N))), env, mkCont[R]{v => v})
+    val vf = env_get(env, S("eval_var")) match {
+      case v@Cell(_) => cell_read(v)
     }
+    if (inRep)
+      static_apply[R](vf, P(exp, P(env, P(mkCont[R]{x => x}, N))), env, cont)
+    else static_apply[R](vf, P(exp, P(env, P(cont, N))), env, mkCont[R]{x => x})
   }
 
   def env_extend[R[_]:Ops](env: Value, params: Value, args: Value) =
@@ -324,10 +327,10 @@ trait EvalDsl extends Functions with TupleOps with IfThenElse with Equal with Un
     def makeFun(f: Fun[Rep]) = make_fun_rep(f)
     def makePair(car: Rep[Value], cdr: Rep[Value]) =
       unchecked("makePair(", car, ", ", cdr, ")")
-    def getCar(p: Rep[Value]) = unchecked("car(", p, ")")
-    def getCdr(p: Rep[Value]) = unchecked("cdr(", p, ")")
-    def cellNew(v: Rep[Value]) = unchecked("cell_new(", v, ")")
-    def cellRead(c: Rep[Value]) = unchecked("cell_read(", c, ")")
+    def getCar(p: Rep[Value]) = unchecked("getCar(", p, ")")
+    def getCdr(p: Rep[Value]) = unchecked("getCdr(", p, ")")
+    def cellNew(v: Rep[Value]) = unchecked("Code(cellNew(", v, "))")
+    def cellRead(c: Rep[Value]) = unchecked("cellRead(", c, ")")
     def cellSet(c: Rep[Value], v: Rep[Value]) = unchecked("cellSet(", c, ", ", v, ")")
     def inRep = true
   }
@@ -375,7 +378,7 @@ trait EvalDslGen extends ScalaGenFunctions with ScalaGenTupleOps with ScalaGenIf
   }
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case BaseApplyRep(f, args, env, cont) =>
-      emitValDef(sym, "base_apply[R]("+quote(f)+", "+quote(args)+", "+quote(Const(env))+", mkCont("+quote(cont)+"))")
+      emitValDef(sym, "base_apply[R]("+quote(f)+", "+quote(args)+", "+quote(Const(env))+", mkCont[R]("+quote(cont)+"))")
     case EvalfunRep(x, y) =>
       stream.println("val f_"+quote(sym)+" = {(" + quote(x) + ": Value) => ")
       emitBlock(y)
