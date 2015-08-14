@@ -30,5 +30,9 @@ class TestRepl extends TestSuite with BeforeAndAfter {
     ev("(set! counter 0)")
     assertResult(I(987)){ev("(fib 16)")}
     assertResult(I(7982)){ev("counter")}
+    ev("(set! fib (lambda (n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2))))))")
+    ev("(set! counter 0)")
+    assertResult(I(13)){ev("(fib 7)")}
+    assertResult(I(0)){ev("counter")}
   }
 }
