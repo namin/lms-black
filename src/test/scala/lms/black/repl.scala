@@ -13,26 +13,26 @@ class TestRepl extends TestSuite with BeforeAndAfter {
   }
 
   test("var counter") {
-    ev("(define counter 0)")
-    ev("(define old-eval-var eval-var)")
-    ev("""(set! eval-var (clambda (e r k)
+    ev("(EM (define counter 0))")
+    ev("(EM (define old-eval-var eval-var))")
+    ev("""(EM (set! eval-var (clambda (e r k)
       (if (eq? e 'n) (set! counter (+ counter 1)) 0)
-      (old-eval-var e r k)))""")
+      (old-eval-var e r k))))""")
     ev("(define fib (lambda (n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2))))))")
-    ev("(set! counter 0)")
+    ev("(EM (set! counter 0))")
     assertResult(I(13)){ev("(fib 7)")}
-    assertResult(I(102)){ev("counter")}
+    assertResult(I(102)){ev("(EM counter)")}
     ev("(set! fib (clambda (n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2))))))")
-    ev("(set! counter 0)")
+    ev("(EM (set! counter 0))")
     assertResult(I(987)){ev("(fib 16)")}
-    assertResult(I(7982)){ev("counter")}
-    ev("(set! eval-var old-eval-var)")
-    ev("(set! counter 0)")
+    assertResult(I(7982)){ev("(EM counter)")}
+    ev("(EM (set! eval-var old-eval-var))")
+    ev("(EM (set! counter 0))")
     assertResult(I(987)){ev("(fib 16)")}
-    assertResult(I(7982)){ev("counter")}
+    assertResult(I(7982)){ev("(EM counter)")}
     ev("(set! fib (lambda (n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2))))))")
-    ev("(set! counter 0)")
+    ev("(EM (set! counter 0))")
     assertResult(I(13)){ev("(fib 7)")}
-    assertResult(I(0)){ev("counter")}
+    assertResult(I(0)){ev("(EM counter)")}
   }
 }

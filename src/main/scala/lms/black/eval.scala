@@ -118,7 +118,7 @@ object eval {
         eval_begin[R](m, body, env_extend[R](cenv, params, args), cont)
       case Evalfun(key) =>
         val f = funs(key).fun[R]
-        apply_cont[R](cont, f(m)(args))
+        apply_cont[R](cont, f(MCont(env, cont, m))(args))
       case Prim(p) =>
         apply_cont[R](cont, apply_primitive(p, args))
     }
@@ -180,11 +180,12 @@ object eval {
           case P(_, P(params, body)) => (params, body)
         }
         if (!inRep) {
+          val MCont(meta_env, meta_cont, meta_mcont) = m
           trait Program extends EvalDsl {
             def snippet(v: Rep[Value]): Rep[Value] = {
               eval_begin[Rep](m, body,
                 env_extend[Rep](env, params, Code(v))(OpsRep),
-                mkCont[Rep](x => x)(OpsRep))(OpsRep)
+                mkCont[R]{x => x})(OpsRep)
             }
           }
           val r = new EvalDslDriver with Program
@@ -192,9 +193,14 @@ object eval {
           apply_cont(cont, lift(evalfun(r.f)))
         } else {
           val f = makeFun(m, new Fun[R] {
-            def fun[RF[_]:Ops] = { m2 => {(v: R[Value]) =>
-              eval_begin[RF](m2, body, env_extend[RF](env, params, Code(v)), mkCont[RF](x => x))
-            }}
+            def fun[RF[_]:Ops] = ( m2 => {
+              val MCont(meta_env, meta_cont, meta_mcont) = m2;
+              ((v: R[Value]) => {
+              eval_begin[RF](meta_mcont, body,
+                env_extend[RF](env, params, Code(v)),
+                meta_cont)
+              })
+            })
           })
           apply_cont(cont, f)
         }
@@ -233,6 +239,14 @@ object eval {
           case P(_, P(e, N)) => e
         }
         apply_cont(cont, e)
+      case P(S("EM"), _) =>
+        val e = exp match {
+          case P(_, P(e, N)) => e
+        }
+        val MCont(meta_env, meta_cont, meta_mcont) = m
+        base_eval[R](meta_mcont, e, meta_env, mkCont[R]{v =>
+          apply_cont(cont, v) // shift_down missing
+        })
       case P(k@S("hack"), _) =>
         cell_read(env_get(env, k)) match {
           case Evalfun(key) =>
@@ -281,25 +295,19 @@ object eval {
       case v => apply_cont(cont, lift(v))
     }
   }
-  // this inEval scheme makes no sene for app...
-  // time for a tower
-  var inEval = Set[Value]()
+
+
   def meta_apply[R[_]:Ops](m: MCont, s: Value, exp: Value, env: Value, cont: Value): R[Value] = {
-    if (inEval.contains(s)) s match {
-      case S("eval-var") => eval_var[R](m, exp, env, cont)
-      case S("eval-application") => eval_application[R](m, exp, env, cont)
-    } else {
-      inEval += s
-      val o = implicitly[Ops[R]]; import o._
-      val fun = env_get(env, s) match {
-        case v@Cell(_) => cell_read(v)
-      }
-      val k = mkCont[R]{v => inEval -= s; apply_cont(cont, v)}
-      val kid = mkCont[R]{v => v}
-      val (kargs, kout) = if (inRep) (kid, k) else (k, kid)
-      val args = P(exp, P(env, P(kargs, N)))
-      static_apply[R](m, fun, args, env, kout)
+    val MCont(meta_env, meta_cont, meta_mcont) = m
+    val o = implicitly[Ops[R]]; import o._
+    val fun = env_get(meta_env, s) match {
+      case v@Cell(_) => cell_read(v)
     }
+    val k = cont
+    val kid = mkCont[R]{v => v}
+    val (kargs, kout) = if (inRep) (kid, k) else (k, kid)
+    val args = P(exp, P(env, P(kargs, N)))
+    static_apply[R](m, fun, args, meta_env, kout)
   }
 
   def env_extend[R[_]:Ops](env: Value, params: Value, args: Value) =
