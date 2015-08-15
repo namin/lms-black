@@ -62,29 +62,6 @@ class TestEvaluator extends TestSuite {
     //)
   }
 
-  test ("hack") {
-    assertResult(I(0)){
-      top_eval[NoRep](A(L(false, "hack", A(S("hack"), List(I(0), A(S("cdr"), List(I(0)))))),
-        List(L(true, List("exp", "env", "cont"),
-          A(S("base-eval"),
-            List(A(S("car"), List(A(S("cdr"), List(S("exp"))))),
-              S("env"), S("cont")))))))
-    }
-  }
-
-  test ("hack compiled") {
-    assertResult(I(0)){
-      top_eval[NoRep](A(L(false, "hack",
-        A(L(true, "n",
-          A(S("hack"), List(S("n"), A(S("cdr"), List(S("n")))))),
-          List(I(0)))),
-        List(L(true, List("exp", "env", "cont"),
-          A(S("base-eval"),
-            List(A(S("car"), List(A(S("cdr"), List(S("exp"))))),
-              S("env"), S("cont")))))))
-    }
-  }
-
   def counter(c: Boolean) = L(c, "c", A(S("begin"),
     List(
       A(S("cell_set!"), List(S("c"), A(S("+"),
@@ -129,24 +106,5 @@ class TestEvaluator extends TestSuite {
     assertResult(I(3)){
       top_eval[NoRep](A(counter2(true), List(I(0))))
     }
-  }
-
-  test ("problem") {
-    //assertResult(I(13)){
-    println(
-      top_eval[NoRep]{
-        A(L(false, List("counter_thunk", "thunk"), A(S("begin"), List(
-          A(S("thunk"), List()), A(S("counter_thunk"), List())))), List(
-          A(L(false, List("counter", "old_eval_var"), A(S("begin"), List(
-            A(S("set!"), List(S("eval-var"), L(true, List("e", "r", "k"),
-              A(S("begin"), List(
-                A(S("set!"), List(S("counter"), A(S("+"), List(S("counter"), I(1))))),
-                A(S("old_eval_var"), List(S("e"), S("r"), S("k")))))))),
-            L(false, List(), S("counter"))))),
-            List(I(0), S("eval-var"))),
-          L(false, List(), A(A(Y(true), List(fib(true))), List(I(7))))))
-      }
-    )
-    //}
   }
 }

@@ -247,12 +247,6 @@ object eval {
         base_eval[R](meta_mcont, e, meta_env, mkCont[R]{v =>
           apply_cont(cont, v) // shift_down missing
         })
-      case P(k@S("hack"), _) =>
-        cell_read(env_get(env, k)) match {
-          case Evalfun(key) =>
-            val f = funs(key).fun[R]
-            f(m)(P(exp, P(env, P(cont, N))))
-        }
       case P(fun, args) => meta_apply[R](m, S("eval-application"), exp, env, cont)
     }
   }
