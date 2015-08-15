@@ -172,15 +172,7 @@ object eval {
       case S(sym) => meta_apply[R](m, S("eval-var"), exp, env, cont)
       case P(S("lambda"), _) => meta_apply[R](m, S("eval-lambda"), exp, env, cont)
       case P(S("clambda"), _) => meta_apply[R](m, S("eval-clambda"), exp, env, cont)
-      case P(S("if"), _) =>
-        val (cond, thenp, elsep) = exp match {
-          case P(_, P(cond, P(thenp, P(elsep, N)))) => (cond, thenp, elsep)
-        }
-        base_eval[R](m, cond, env, mkCont[R]({ vc =>
-          ifThenElse(isTrue(vc),
-            base_eval[R](m, thenp, env, cont),
-            base_eval[R](m, elsep, env, cont))
-        }))
+      case P(S("if"), _) => meta_apply[R](m, S("eval-if"), exp, env, cont)
       case P(S("begin"), body) => eval_begin[R](m, body, env, cont)
       case P(S("set!"), _) =>
         val (name, body) = exp match {
@@ -308,6 +300,24 @@ object eval {
     }
   }
 
+  def eval_if_fun: Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops] = { m => { (vc: Value) =>
+      val P(exp, P(env, P(cont, N))) = vc
+      eval_if[R](m, exp, env, cont)
+    }}
+  }
+  def eval_if[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
+    val o = implicitly[Ops[R]]; import o._
+    val (cond, thenp, elsep) = exp match {
+      case P(_, P(cond, P(thenp, P(elsep, N)))) => (cond, thenp, elsep)
+    }
+    base_eval[R](m, cond, env, mkCont[R]({ vc =>
+      ifThenElse(isTrue(vc),
+        base_eval[R](m, thenp, env, cont),
+        base_eval[R](m, elsep, env, cont))
+    }))
+  }
+
   def meta_apply[R[_]:Ops](m: MEnv, s: Value, exp: Value, env: Value, cont: Value): R[Value] = {
     val MEnv(meta_env, meta_menv) = m
     val o = implicitly[Ops[R]]; import o._
@@ -367,6 +377,7 @@ object eval {
   }
 
   def init_frame = list_to_value(List(
+    P(S("eval-if"), cell_new(evalfun(eval_if_fun))),
     P(S("eval-clambda"), cell_new(evalfun(eval_clambda_fun))),
     P(S("eval-lambda"), cell_new(evalfun(eval_lambda_fun))),
     P(S("eval-application"), cell_new(evalfun(eval_application_fun))),
