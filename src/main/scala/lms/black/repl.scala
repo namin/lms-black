@@ -8,7 +8,7 @@ object repl {
   var global_env = init_env
   def ev(s: String) = {
     val Success(e, _) = parseAll(exp, s)
-    base_eval[NoRep](e, global_env, idcont)
+    base_eval[NoRep](init_mcont, e, global_env, idcont)
   }
   def clean() = {
     reset()
