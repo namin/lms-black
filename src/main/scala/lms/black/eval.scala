@@ -451,7 +451,7 @@ trait EvalDslGen extends ScalaGenFunctions with ScalaGenTupleOps with ScalaGenIf
   }
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case BaseApplyRep(m, f, args, env, cont) =>
-      emitValDef(sym, "base_apply[R]("+m.toString+", "+quote(f)+", "+quote(args)+", "+quote(Const(env))+", mkCont[R]("+quote(cont)+"))")
+      emitValDef(sym, "base_apply[R](m,"+quote(f)+", "+quote(args)+", "+quote(Const(env))+", mkCont[R]("+quote(cont)+"))")
     case EvalfunRep(x, y) =>
       stream.println("val f_"+quote(sym)+" = {(" + quote(x) + ": Value) => ")
       emitBlock(y)
@@ -499,8 +499,8 @@ trait EvalDslImpl extends EvalDslExp { q =>
         stream.println("class "+className+(if (staticData.isEmpty) "" else "("+staticData.map(p=>"p"+quote(p._1)+":"+p._1.tp).mkString(",")+")")+" extends Fun[NoRep] with (Value => Value) {")
 
         stream.println("def apply(v: Value): Value = v")
-        stream.println("def fun[R[_]:Ops] = { m => { v => fun[R](v)  } }")
-        stream.println("def fun[R[_]:Ops]("+args.map(a => quote(a) + ":" + "Value"/*remap(a.tp)*/).mkString(", ")+"): "+sA+" = {")
+        stream.println("def fun[R[_]:Ops] = { m => { v => fun[R](m, v)  } }")
+        stream.println("def fun[R[_]:Ops](m: MCont, "+args.map(a => quote(a) + ":" + "Value"/*remap(a.tp)*/).mkString(", ")+"): "+sA+" = {")
         stream.println("val o = implicitly[Ops[R]]; import o._")
 
         emitBlock(body)
