@@ -170,11 +170,7 @@ object eval {
     exp match {
       case I(_) | B(_) => apply_cont[R](cont, lift(exp))
       case S(sym) => meta_apply[R](m, S("eval-var"), exp, env, cont)
-      case P(S("lambda"), _) =>
-        val (params, body) = exp match {
-          case P(_, P(params, body)) => (params, body)
-        }
-        apply_cont(cont, lift(Clo(params, body, env)))
+      case P(S("lambda"), _) => meta_apply[R](m, S("eval-lambda"), exp, env, cont)
       case P(S("clambda"), _) =>
         val (params, body) = exp match {
           case P(_, P(params, body)) => (params, body)
@@ -288,6 +284,19 @@ object eval {
     }
   }
 
+  def eval_lambda_fun: Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops] = { m => { (vc: Value) =>
+      val P(exp, P(env, P(cont, N))) = vc
+      eval_lambda[R](m, exp, env, cont)
+    }}
+  }
+  def eval_lambda[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
+    val o = implicitly[Ops[R]]; import o._
+    val (params, body) = exp match {
+      case P(_, P(params, body)) => (params, body)
+    }
+    apply_cont(cont, lift(Clo(params, body, env)))
+  }
 
   def meta_apply[R[_]:Ops](m: MEnv, s: Value, exp: Value, env: Value, cont: Value): R[Value] = {
     val MEnv(meta_env, meta_menv) = m
@@ -348,6 +357,7 @@ object eval {
   }
 
   def init_frame = list_to_value(List(
+    P(S("eval-lambda"), cell_new(evalfun(eval_lambda_fun))),
     P(S("eval-application"), cell_new(evalfun(eval_application_fun))),
     P(S("eval-var"), cell_new(evalfun(eval_var_fun))),
     P(S("base-eval"), evalfun(base_eval_fun)),
