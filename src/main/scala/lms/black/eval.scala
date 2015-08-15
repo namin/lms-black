@@ -173,22 +173,21 @@ object eval {
       case P(S("lambda"), _) => meta_apply[R](m, S("eval-lambda"), exp, env, cont)
       case P(S("clambda"), _) => meta_apply[R](m, S("eval-clambda"), exp, env, cont)
       case P(S("if"), _) => meta_apply[R](m, S("eval-if"), exp, env, cont)
-      case P(S("begin"), body) => eval_begin[R](m, body, env, cont)
+      case P(S("begin"), body) => meta_apply[R](m, S("eval-begin"), exp, env, cont)
       case P(S("set!"), _) => meta_apply[R](m, S("eval-set!"), exp, env, cont)
       case P(S("define"), _) => meta_apply[R](m, S("eval-define"), exp, env, cont)
       case P(S("quote"), _) => meta_apply[R](m, S("eval-quote"), exp, env, cont)
-      case P(S("EM"), _) =>
-        val e = exp match {
-          case P(_, P(e, N)) => e
-        }
-        val MEnv(meta_env, meta_menv) = m
-        base_eval[R](meta_menv, e, meta_env, mkCont[R]{v =>
-          apply_cont(cont, v)
-        })
+      case P(S("EM"), _) => meta_apply[R](m, S("eval-EM"), exp, env, cont)
       case P(fun, args) => meta_apply[R](m, S("eval-application"), exp, env, cont)
     }
   }
 
+  def eval_begin_fun: Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops] = { m => { (vc: Value) =>
+      val P(P(_, body), P(env, P(cont, N))) = vc
+      eval_begin[R](m, body, env, cont)
+    }}
+  }
   def eval_begin[R[_]:Ops](m: MEnv, body: Value, env: Value, cont: Value): R[Value] =
     body match {
       case P(exp, N) => base_eval[R](m, exp, env, cont)
@@ -348,6 +347,23 @@ object eval {
     apply_cont(cont, e)
   }
 
+  def eval_EM_fun: Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops] = { m => { (vc: Value) =>
+      val P(exp, P(env, P(cont, N))) = vc
+      eval_EM[R](m, exp, env, cont)
+    }}
+  }
+  def eval_EM[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
+    val o = implicitly[Ops[R]]; import o._
+    val e = exp match {
+      case P(_, P(e, N)) => e
+    }
+    val MEnv(meta_env, meta_menv) = m
+    base_eval[R](meta_menv, e, meta_env, mkCont[R]{v =>
+      apply_cont(cont, v)
+    })
+  }
+
   def meta_apply[R[_]:Ops](m: MEnv, s: Value, exp: Value, env: Value, cont: Value): R[Value] = {
     val MEnv(meta_env, meta_menv) = m
     val o = implicitly[Ops[R]]; import o._
@@ -407,6 +423,8 @@ object eval {
   }
 
   def init_frame = list_to_value(List(
+    P(S("eval-begin"), cell_new(evalfun(eval_begin_fun))),
+    P(S("eval-EM"), cell_new(evalfun(eval_EM_fun))),
     P(S("eval-quote"), cell_new(evalfun(eval_quote_fun))),
     P(S("eval-define"), cell_new(evalfun(eval_define_fun))),
     P(S("eval-set!"), cell_new(evalfun(eval_set_bang_fun))),
