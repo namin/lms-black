@@ -188,7 +188,7 @@ object eval {
       case P(S("begin"), body) => eval_begin[R](body, env, cont)
       case P(S("set!"), _) =>
         val (name, body) = exp match {
-          case P(_, P(name, P(body, N))) => (name, body)
+          case P(_, P(name@S(_), P(body, N))) => (name, body)
         }
         base_eval[R](body, env, mkCont[R]({ v =>
           val p = env_get(env, name)
@@ -197,7 +197,7 @@ object eval {
         }))
       case P(S("define"), _) =>
         val (name, body) = exp match {
-          case P(_, P(name, P(body, N))) => (name, body)
+          case P(_, P(name@S(_), P(body, N))) => (name, body)
         }
         base_eval[R](body, env, mkCont[R]({ v =>
           val (c, frame) = env match {
