@@ -175,17 +175,7 @@ object eval {
       case P(S("if"), _) => meta_apply[R](m, S("eval-if"), exp, env, cont)
       case P(S("begin"), body) => eval_begin[R](m, body, env, cont)
       case P(S("set!"), _) => meta_apply[R](m, S("eval-set!"), exp, env, cont)
-      case P(S("define"), _) =>
-        val (name, body) = exp match {
-          case P(_, P(name@S(_), P(body, N))) => (name, body)
-        }
-        base_eval[R](m, body, env, mkCont[R]({ v =>
-          val (c, frame) = env match {
-            case P(c@Cell(key), _) => (c, cells(key))
-          }
-          cellSet(lift(c), makePair(makePair(name, cellNew(v)), frame))
-          apply_cont(cont, name)
-        }))
+      case P(S("define"), _) => meta_apply[R](m, S("eval-define"), exp, env, cont)
       case P(S("quote"), _) =>
         val e = exp match {
           case P(_, P(e, N)) => e
@@ -328,6 +318,26 @@ object eval {
     }))
   }
 
+  def eval_define_fun: Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops] = { m => { (vc: Value) =>
+      val P(exp, P(env, P(cont, N))) = vc
+      eval_define[R](m, exp, env, cont)
+    }}
+  }
+  def eval_define[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
+    val o = implicitly[Ops[R]]; import o._
+    val (name, body) = exp match {
+      case P(_, P(name@S(_), P(body, N))) => (name, body)
+    }
+    base_eval[R](m, body, env, mkCont[R]({ v =>
+      val (c, frame) = env match {
+        case P(c@Cell(key), _) => (c, cells(key))
+      }
+      cellSet(lift(c), makePair(makePair(name, cellNew(v)), frame))
+      apply_cont(cont, name)
+    }))
+  }
+
   def meta_apply[R[_]:Ops](m: MEnv, s: Value, exp: Value, env: Value, cont: Value): R[Value] = {
     val MEnv(meta_env, meta_menv) = m
     val o = implicitly[Ops[R]]; import o._
@@ -387,6 +397,7 @@ object eval {
   }
 
   def init_frame = list_to_value(List(
+    P(S("eval-define"), cell_new(evalfun(eval_define_fun))),
     P(S("eval-set!"), cell_new(evalfun(eval_set_bang_fun))),
     P(S("eval-if"), cell_new(evalfun(eval_if_fun))),
     P(S("eval-clambda"), cell_new(evalfun(eval_clambda_fun))),
