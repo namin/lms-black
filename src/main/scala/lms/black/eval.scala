@@ -115,7 +115,7 @@ object eval {
     val o = implicitly[Ops[R]]; import o._
     fun match {
       case Clo(params, body, cenv) =>
-        eval_begin[R](m, body, env_extend[R](cenv, params, args), cont)
+        meta_apply[R](m, S("eval-begin"), body, env_extend[R](cenv, params, args), cont)
       case Evalfun(key) =>
         val f = funs(key).fun[R]
         apply_cont[R](cont, f(MEnv(env, m))(args))
@@ -173,7 +173,7 @@ object eval {
       case P(S("lambda"), _) => meta_apply[R](m, S("eval-lambda"), exp, env, cont)
       case P(S("clambda"), _) => meta_apply[R](m, S("eval-clambda"), exp, env, cont)
       case P(S("if"), _) => meta_apply[R](m, S("eval-if"), exp, env, cont)
-      case P(S("begin"), body) => meta_apply[R](m, S("eval-begin"), exp, env, cont)
+      case P(S("begin"), body) => meta_apply[R](m, S("eval-begin"), body, env, cont)
       case P(S("set!"), _) => meta_apply[R](m, S("eval-set!"), exp, env, cont)
       case P(S("define"), _) => meta_apply[R](m, S("eval-define"), exp, env, cont)
       case P(S("quote"), _) => meta_apply[R](m, S("eval-quote"), exp, env, cont)
@@ -184,7 +184,7 @@ object eval {
 
   def eval_begin_fun: Fun[NoRep] = new Fun[NoRep] {
     def fun[R[_]:Ops] = { m => { (vc: Value) =>
-      val P(P(_, body), P(env, P(cont, N))) = vc
+      val P(body, P(env, P(cont, N))) = vc
       eval_begin[R](m, body, env, cont)
     }}
   }
