@@ -17,7 +17,9 @@ object eval {
   case class Code[R[_]](c: R[Value]) extends Value
   case class Cont(key: Int) extends Value
   case class Cell(key: Int) extends Value
-  case class MCont(key: Int) // TODO
+  class MCont(val key: Int) {
+    override def toString = "MCont("+key+")"
+  }
 
   var cells = Map[Int, Value]()
   def addCell(v: Value): Int = {
@@ -52,11 +54,30 @@ object eval {
     conts += (key -> f)
     key
   }
+
+  var mconts = Map[Int, _MCont]()
+  class _MCont(val env: Value, val cont: Value, _mcont: => MCont) {
+    lazy val mcont = _mcont
+  }
+  object MCont {
+    def apply(env: Value, cont: Value, _mcont: => MCont): MCont = {
+      val key = mconts.size
+      mconts += (key -> new _MCont(env, cont, _mcont))
+      new MCont(key)
+    }
+    def unapply(m: MCont): Some[(Value, Value, MCont)] = {
+      val _m = mconts(m.key)
+      Some(_m.env, _m.cont, _m.mcont)
+    }
+  }
+
   def reset() {
+    cells = cells.empty
     funs = funs.empty
     conts = conts.empty
-    cells = cells.empty
+    mconts = mconts.empty
   }
+
   def evalfun(f: Fun[NoRep]) = Evalfun(addFun(f))
   def mkCont[R[_]:Ops](f: R[Value] => R[Value]): Value = Cont(addCont(new FunC {
     def fun[R[_]:Ops] = f.asInstanceOf[R[Value] => R[Value]]
@@ -374,11 +395,11 @@ object eval {
   }
   def display(v: Value) = println(addParen(pp(v)))
 
-  def init_mcont = MCont(0) // TODO
+  def init_mcont[R[_]:Ops]: MCont = MCont(init_env, mkCont[R]{x => x}, init_mcont[R])
 
   def top_eval[R[_]:Ops](exp: Value): R[Value] = {
     try {
-      base_eval[R](init_mcont, exp, init_env, mkCont[R](x => x))
+      base_eval[R](init_mcont[R], exp, init_env, mkCont[R](x => x))
     } finally {
       reset()
     }
@@ -451,7 +472,7 @@ trait EvalDslGen extends ScalaGenFunctions with ScalaGenTupleOps with ScalaGenIf
   }
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case BaseApplyRep(m, f, args, env, cont) =>
-      emitValDef(sym, "base_apply[R](m,"+quote(f)+", "+quote(args)+", "+quote(Const(env))+", mkCont[R]("+quote(cont)+"))")
+      emitValDef(sym, "base_apply[R](m, "+quote(f)+", "+quote(args)+", "+quote(Const(env))+", mkCont[R]("+quote(cont)+"))")
     case EvalfunRep(x, y) =>
       stream.println("val f_"+quote(sym)+" = {(" + quote(x) + ": Value) => ")
       emitBlock(y)
