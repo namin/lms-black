@@ -373,7 +373,7 @@ object eval {
     val cont_id = mkCont[R]{v => v}
     val (arg_cont, meta_cont) = if (inRep) (cont_id, cont) else (cont, cont_id)
     val args = P(exp, P(env, P(arg_cont, N)))
-    static_apply[R](m, fun, args, meta_env, meta_cont)
+    static_apply[R](meta_menv, fun, args, meta_env, meta_cont)
   }
 
   def env_extend[R[_]:Ops](env: Value, params: Value, args: Value) =
