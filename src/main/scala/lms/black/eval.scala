@@ -17,8 +17,8 @@ object eval {
   case class Code[R[_]](c: R[Value]) extends Value
   case class Cont(key: Int) extends Value
   case class Cell(key: Int) extends Value
-  class MCont(val key: Int) {
-    override def toString = "MCont("+key+")"
+  class MEnv(val key: Int) {
+    override def toString = "MEnv("+key+")"
   }
 
   var cells = Map[Int, Value]()
@@ -37,7 +37,7 @@ object eval {
     case Code(cc) => cell_set(cc.asInstanceOf[Value], v)
   }
   abstract class Fun[W[_]:Ops] extends Serializable {
-    def fun[R[_]:Ops]: MCont => W[Value] => R[Value]
+    def fun[R[_]:Ops]: MEnv => W[Value] => R[Value]
   }
   var funs = Map[Int, Fun[NoRep]]()
   def addFun(f: Fun[NoRep]): Int = {
@@ -55,19 +55,19 @@ object eval {
     key
   }
 
-  var mconts = Map[Int, _MCont]()
-  class _MCont(val env: Value, val cont: Value, _mcont: => MCont) {
-    lazy val mcont = _mcont
+  var menvs = Map[Int, _MEnv]()
+  class _MEnv(val env: Value, _menv: => MEnv) {
+    lazy val menv = _menv
   }
-  object MCont {
-    def apply(env: Value, cont: Value, _mcont: => MCont): MCont = {
-      val key = mconts.size
-      mconts += (key -> new _MCont(env, cont, _mcont))
-      new MCont(key)
+  object MEnv {
+    def apply(env: Value, _menv: => MEnv): MEnv = {
+      val key = menvs.size
+      menvs += (key -> new _MEnv(env, _menv))
+      new MEnv(key)
     }
-    def unapply(m: MCont): Some[(Value, Value, MCont)] = {
-      val _m = mconts(m.key)
-      Some(_m.env, _m.cont, _m.mcont)
+    def unapply(m: MEnv): Some[(Value, MEnv)] = {
+      val _m = menvs(m.key)
+      Some(_m.env, _m.menv)
     }
   }
 
@@ -75,7 +75,7 @@ object eval {
     cells = cells.empty
     funs = funs.empty
     conts = conts.empty
-    mconts = mconts.empty
+    menvs = menvs.empty
   }
 
   def evalfun(f: Fun[NoRep]) = Evalfun(addFun(f))
@@ -99,10 +99,10 @@ object eval {
 
   trait Ops[R[_]] {
     implicit def lift(v: Value): R[Value]
-    def app(m: MCont, fun: R[Value], args: R[Value], env: Value, cont: Value): R[Value]
+    def app(m: MEnv, fun: R[Value], args: R[Value], env: Value, cont: Value): R[Value]
     def isTrue(v: R[Value]): R[Boolean]
     def ifThenElse[A:Manifest](cond: R[Boolean], thenp: => R[A], elsep: => R[A]): R[A]
-    def makeFun(m: MCont, f: Fun[R]): R[Value]
+    def makeFun(m: MEnv, f: Fun[R]): R[Value]
     def makePair(car: R[Value], cdr: R[Value]): R[Value]
     def getCar(p: R[Value]): R[Value]
     def getCdr(p: R[Value]): R[Value]
@@ -111,14 +111,14 @@ object eval {
     def cellSet(c: R[Value], v: R[Value]): R[Value]
     def inRep: Boolean
   }
-  def static_apply[R[_]:Ops](m: MCont, fun: Value, args: Value, env: Value, cont: Value) = {
+  def static_apply[R[_]:Ops](m: MEnv, fun: Value, args: Value, env: Value, cont: Value) = {
     val o = implicitly[Ops[R]]; import o._
     fun match {
       case Clo(params, body, cenv) =>
         eval_begin[R](m, body, env_extend[R](cenv, params, args), cont)
       case Evalfun(key) =>
         val f = funs(key).fun[R]
-        apply_cont[R](cont, f(MCont(env, cont, m))(args))
+        apply_cont[R](cont, f(MEnv(env, m))(args))
       case Prim(p) =>
         apply_cont[R](cont, apply_primitive(p, args))
     }
@@ -126,13 +126,13 @@ object eval {
   type NoRep[A] = A
   implicit object OpsNoRep extends Ops[NoRep] {
     def lift(v: Value) = v
-    def app(m: MCont, fun: Value, args: Value, env: Value, cont: Value) =
+    def app(m: MEnv, fun: Value, args: Value, env: Value, cont: Value) =
       static_apply[NoRep](m, fun, args, env, cont)
     def isTrue(v: Value) = v match {
       case B(b) => b
     }
     def ifThenElse[A:Manifest](cond: Boolean, thenp: => A, elsep: => A): A = if (cond) thenp else elsep
-    def makeFun(m: MCont, f: Fun[NoRep]) = evalfun(f)
+    def makeFun(m: MEnv, f: Fun[NoRep]) = evalfun(f)
     def makePair(car: Value, cdr: Value) = cons(car, cdr)
     def getCar(p: Value) = car(p)
     def getCdr(p: Value) = cdr(p)
@@ -142,12 +142,12 @@ object eval {
     def inRep = false
   }
 
-  def base_apply[R[_]:Ops](m: MCont, fun: R[Value], args: R[Value], env: Value, cont: Value) = {
+  def base_apply[R[_]:Ops](m: MEnv, fun: R[Value], args: R[Value], env: Value, cont: Value) = {
     val o = implicitly[Ops[R]]
     o.app(m, fun, args, env, cont)
   }
 
-  def base_evlist[R[_]:Ops](m: MCont, exps: Value, env: Value, cont: Value): R[Value] = {
+  def base_evlist[R[_]:Ops](m: MEnv, exps: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     exps match {
       case N => apply_cont[R](cont, lift(N))
@@ -165,7 +165,7 @@ object eval {
       base_eval[R](m, exp, env, cont)
     }}
   }
-  def base_eval[R[_]:Ops](m: MCont, exp: Value, env: Value, cont: Value): R[Value] = {
+  def base_eval[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     exp match {
       case I(_) | B(_) => apply_cont[R](cont, lift(exp))
@@ -180,12 +180,11 @@ object eval {
           case P(_, P(params, body)) => (params, body)
         }
         if (!inRep) {
-          val MCont(meta_env, meta_cont, meta_mcont) = m
           trait Program extends EvalDsl {
             def snippet(v: Rep[Value]): Rep[Value] = {
               eval_begin[Rep](m, body,
                 env_extend[Rep](env, params, Code(v))(OpsRep),
-                meta_cont)(OpsRep)
+                mkCont[R]{v => v})(OpsRep)
             }
           }
           val r = new EvalDslDriver with Program
@@ -194,11 +193,10 @@ object eval {
         } else {
           val f = makeFun(m, new Fun[R] {
             def fun[RF[_]:Ops] = ( m2 => {
-              val MCont(meta_env, meta_cont, meta_mcont) = m2;
               ((v: R[Value]) => {
               eval_begin[RF](m2, body,
                 env_extend[RF](env, params, Code(v)),
-                meta_cont)
+                mkCont[R]{v => v})
               })
             })
           })
@@ -243,15 +241,15 @@ object eval {
         val e = exp match {
           case P(_, P(e, N)) => e
         }
-        val MCont(meta_env, meta_cont, meta_mcont) = m
-        base_eval[R](meta_mcont, e, meta_env, mkCont[R]{v =>
-          apply_cont(cont, v) // shift_down missing
+        val MEnv(meta_env, meta_menv) = m
+        base_eval[R](meta_menv, e, meta_env, mkCont[R]{v =>
+          apply_cont(cont, v)
         })
       case P(fun, args) => meta_apply[R](m, S("eval-application"), exp, env, cont)
     }
   }
 
-  def eval_begin[R[_]:Ops](m: MCont, body: Value, env: Value, cont: Value): R[Value] =
+  def eval_begin[R[_]:Ops](m: MEnv, body: Value, env: Value, cont: Value): R[Value] =
     body match {
       case P(exp, N) => base_eval[R](m, exp, env, cont)
       case P(exp, rest) => base_eval[R](m, exp, env, mkCont[R]{ _ =>
@@ -265,7 +263,7 @@ object eval {
       eval_application[R](m, exp, env, cont)
     }}
   }
-  def eval_application[R[_]:Ops](m: MCont, exp: Value, env: Value, cont: Value): R[Value] = {
+  def eval_application[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     val P(fun, args) = exp
     base_eval[R](m, fun, env, mkCont[R]({ v =>
@@ -281,7 +279,7 @@ object eval {
       eval_var[R](m, exp, env, cont)
     }}
   }
-  def eval_var[R[_]:Ops](m: MCont, exp: Value, env: Value, cont: Value): R[Value] = {
+  def eval_var[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     env_get(env, exp) match {
       case Code(v: R[Value]) => apply_cont[R](cont, cellRead(v))
@@ -291,17 +289,16 @@ object eval {
   }
 
 
-  def meta_apply[R[_]:Ops](m: MCont, s: Value, exp: Value, env: Value, cont: Value): R[Value] = {
-    val MCont(meta_env, meta_cont, meta_mcont) = m
+  def meta_apply[R[_]:Ops](m: MEnv, s: Value, exp: Value, env: Value, cont: Value): R[Value] = {
+    val MEnv(meta_env, meta_menv) = m
     val o = implicitly[Ops[R]]; import o._
     val fun = env_get(meta_env, s) match {
       case v@Cell(_) => cell_read(v)
     }
-    val k = cont
-    val kid = mkCont[R]{v => v}
-    val (kargs, kout) = if (inRep) (kid, k) else (k, kid)
-    val args = P(exp, P(env, P(kargs, N)))
-    static_apply[R](m, fun, args, meta_env, kout)
+    val cont_id = mkCont[R]{v => v}
+    val (arg_cont, meta_cont) = if (inRep) (cont_id, cont) else (cont, cont_id)
+    val args = P(exp, P(env, P(arg_cont, N)))
+    static_apply[R](m, fun, args, meta_env, meta_cont)
   }
 
   def env_extend[R[_]:Ops](env: Value, params: Value, args: Value) =
@@ -397,11 +394,11 @@ object eval {
   }
   def display(v: Value) = println(addParen(pp(v)))
 
-  def init_mcont[R[_]:Ops]: MCont = MCont(init_env, mkCont[R]{x => x}, init_mcont[R])
+  def init_menv[R[_]:Ops]: MEnv = MEnv(init_env, init_menv[R])
 
   def top_eval[R[_]:Ops](exp: Value): R[Value] = {
     try {
-      base_eval[R](init_mcont[R], exp, init_env, mkCont[R](x => x))
+      base_eval[R](init_menv[R], exp, init_env, mkCont[R](x => x))
     } finally {
       reset()
     }
@@ -412,15 +409,15 @@ import eval._
 import scala.lms.common._
 
 trait EvalDsl extends Functions with TupleOps with IfThenElse with Equal with UncheckedOps {
-  def base_apply_rep(m: MCont, f: Rep[Value], args: Rep[Value], env: Value, cont: Value): Rep[Value]
-  def make_fun_rep(m: MCont, f: Fun[Rep]): Rep[Value]
+  def base_apply_rep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value): Rep[Value]
+  def make_fun_rep(m: MEnv, f: Fun[Rep]): Rep[Value]
   implicit object OpsRep extends scala.Serializable with Ops[Rep] {
     def lift(v: Value) = unit(v)
-    def app(m: MCont, f: Rep[Value], args: Rep[Value], env: Value, cont: Value) =
+    def app(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value) =
       base_apply_rep(m, f, args, env, cont)
     def isTrue(v: Rep[Value]): Rep[Boolean] = unchecked("isTrue(", v, ")")//unit(B(false))!=v
     def ifThenElse[A:Manifest](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A] = if (cond) thenp else elsep
-    def makeFun(m: MCont, f: Fun[Rep]) = make_fun_rep(m, f)
+    def makeFun(m: MEnv, f: Fun[Rep]) = make_fun_rep(m, f)
     def makePair(car: Rep[Value], cdr: Rep[Value]) =
       unchecked("makePair(", car, ", ", cdr, ")")
     def getCar(p: Rep[Value]) = unchecked("getCar(", p, ")")
@@ -435,13 +432,13 @@ trait EvalDsl extends Functions with TupleOps with IfThenElse with Equal with Un
 }
 
 trait EvalDslExp extends EvalDsl with EffectExp with FunctionsExp with TupleOpsExp with IfThenElseExp with EqualExp with UncheckedOpsExp {
-  case class BaseApplyRep(m: MCont, f: Rep[Value], args: Rep[Value], env: Value, cont: Rep[Value => Value]) extends Def[Value]
-  def base_apply_rep(m: MCont, f: Rep[Value], args: Rep[Value], env: Value, cont: Value): Rep[Value] = cont match {
+  case class BaseApplyRep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Rep[Value => Value]) extends Def[Value]
+  def base_apply_rep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value): Rep[Value] = cont match {
     case Cont(key) => reflectEffect(BaseApplyRep(m, f, args, env, fun(conts(key).fun[Rep])))
   }
 
   case class EvalfunRep(x: Sym[Value], y: Block[Value]) extends Def[Value]
-  def make_fun_rep(m: MCont, f: Fun[Rep]) = {
+  def make_fun_rep(m: MEnv, f: Fun[Rep]) = {
     val x = fresh[Value]
     val y = reifyEffects{
       val fn = f.fun[Rep]
@@ -523,7 +520,7 @@ trait EvalDslImpl extends EvalDslExp { q =>
 
         stream.println("def apply(v: Value): Value = v")
         stream.println("def fun[R[_]:Ops] = { m => { v => fun[R](m, v)  } }")
-        stream.println("def fun[R[_]:Ops](m: MCont, "+args.map(a => quote(a) + ":" + "Value"/*remap(a.tp)*/).mkString(", ")+"): "+sA+" = {")
+        stream.println("def fun[R[_]:Ops](m: MEnv, "+args.map(a => quote(a) + ":" + "Value"/*remap(a.tp)*/).mkString(", ")+"): "+sA+" = {")
         stream.println("val o = implicitly[Ops[R]]; import o._")
 
         emitBlock(body)
