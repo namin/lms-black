@@ -171,33 +171,7 @@ object eval {
       case I(_) | B(_) => apply_cont[R](cont, lift(exp))
       case S(sym) => meta_apply[R](m, S("eval-var"), exp, env, cont)
       case P(S("lambda"), _) => meta_apply[R](m, S("eval-lambda"), exp, env, cont)
-      case P(S("clambda"), _) =>
-        val (params, body) = exp match {
-          case P(_, P(params, body)) => (params, body)
-        }
-        if (!inRep) {
-          trait Program extends EvalDsl {
-            def snippet(v: Rep[Value]): Rep[Value] = {
-              eval_begin[Rep](m, body,
-                env_extend[Rep](env, params, Code(v))(OpsRep),
-                mkCont[R]{v => v})(OpsRep)
-            }
-          }
-          val r = new EvalDslDriver with Program
-          r.precompile
-          apply_cont(cont, lift(evalfun(r.f)))
-        } else {
-          val f = makeFun(m, new Fun[R] {
-            def fun[RF[_]:Ops] = ( m2 => {
-              ((v: R[Value]) => {
-              eval_begin[RF](m2, body,
-                env_extend[RF](env, params, Code(v)),
-                mkCont[R]{v => v})
-              })
-            })
-          })
-          apply_cont(cont, f)
-        }
+      case P(S("clambda"), _) => meta_apply[R](m, S("eval-clambda"), exp, env, cont)
       case P(S("if"), _) =>
         val (cond, thenp, elsep) = exp match {
           case P(_, P(cond, P(thenp, P(elsep, N)))) => (cond, thenp, elsep)
@@ -298,6 +272,42 @@ object eval {
     apply_cont(cont, lift(Clo(params, body, env)))
   }
 
+  def eval_clambda_fun: Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops] = { m => { (vc: Value) =>
+      val P(exp, P(env, P(cont, N))) = vc
+      eval_clambda[R](m, exp, env, cont)
+    }}
+  }
+  def eval_clambda[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
+    val o = implicitly[Ops[R]]; import o._
+    val (params, body) = exp match {
+      case P(_, P(params, body)) => (params, body)
+    }
+    if (!inRep) {
+      trait Program extends EvalDsl {
+        def snippet(v: Rep[Value]): Rep[Value] = {
+          eval_begin[Rep](m, body,
+            env_extend[Rep](env, params, Code(v))(OpsRep),
+            mkCont[R]{v => v})(OpsRep)
+        }
+      }
+      val r = new EvalDslDriver with Program
+      r.precompile
+      apply_cont(cont, lift(evalfun(r.f)))
+    } else {
+      val f = makeFun(m, new Fun[R] {
+        def fun[RF[_]:Ops] = ( m2 => {
+          ((v: R[Value]) => {
+            eval_begin[RF](m2, body,
+              env_extend[RF](env, params, Code(v)),
+              mkCont[R]{v => v})
+          })
+        })
+      })
+      apply_cont(cont, f)
+    }
+  }
+
   def meta_apply[R[_]:Ops](m: MEnv, s: Value, exp: Value, env: Value, cont: Value): R[Value] = {
     val MEnv(meta_env, meta_menv) = m
     val o = implicitly[Ops[R]]; import o._
@@ -357,6 +367,7 @@ object eval {
   }
 
   def init_frame = list_to_value(List(
+    P(S("eval-clambda"), cell_new(evalfun(eval_clambda_fun))),
     P(S("eval-lambda"), cell_new(evalfun(eval_lambda_fun))),
     P(S("eval-application"), cell_new(evalfun(eval_application_fun))),
     P(S("eval-var"), cell_new(evalfun(eval_var_fun))),
