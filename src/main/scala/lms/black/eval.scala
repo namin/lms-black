@@ -255,7 +255,7 @@ object eval {
     if (!inRep) {
       trait Program extends EvalDsl {
         def snippet(v: Rep[Value]): Rep[Value] = {
-          eval_begin[Rep](m, body,
+          meta_apply[Rep](m, S("eval-begin"), body,
             env_extend[Rep](env, params, Code(v))(OpsRep),
             mkCont[R]{v => v})(OpsRep)
         }
@@ -267,7 +267,7 @@ object eval {
       val f = makeFun(m, new Fun[R] {
         def fun[RF[_]:Ops] = ( m2 => {
           ((v: R[Value]) => {
-            eval_begin[RF](m2, body,
+            meta_apply[RF](m2, S("eval-begin"), body,
               env_extend[RF](env, params, Code(v)),
               mkCont[R]{v => v})
           })
