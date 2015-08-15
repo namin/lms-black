@@ -185,7 +185,7 @@ object eval {
             def snippet(v: Rep[Value]): Rep[Value] = {
               eval_begin[Rep](m, body,
                 env_extend[Rep](env, params, Code(v))(OpsRep),
-                mkCont[R]{x => x})(OpsRep)
+                meta_cont)(OpsRep)
             }
           }
           val r = new EvalDslDriver with Program
@@ -196,7 +196,7 @@ object eval {
             def fun[RF[_]:Ops] = ( m2 => {
               val MCont(meta_env, meta_cont, meta_mcont) = m2;
               ((v: R[Value]) => {
-              eval_begin[RF](meta_mcont, body,
+              eval_begin[RF](m2, body,
                 env_extend[RF](env, params, Code(v)),
                 meta_cont)
               })
