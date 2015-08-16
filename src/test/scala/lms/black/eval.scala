@@ -36,17 +36,17 @@ class TestEvaluator extends TestSuite {
   }
 
   test ("fib 7 compiled fib") {
-    //checkOut("yfibc", "scala",
+    checkOut("yfibc", "scala",
       assertResult(I(13)){
         top_eval[NoRep](A(A(Y(false), List(fib(true))), List(I(7))))}
-    //)
+    )
   }
 
   test ("fib 7 compiled all") {
-    //checkOut("ycfibc", "scala",
+    checkOut("ycfibc", "scala",
       assertResult(I(13)){
         top_eval[NoRep](A(A(Y(true), List(fib(true))), List(I(7))))}
-    //)
+    )
   }
 
   test ("sum of fibs evaluated") {
@@ -55,11 +55,11 @@ class TestEvaluator extends TestSuite {
   }
 
   test ("sum of fibs compiled") {
-    //checkOut("sumf", "scala",
+    checkOut("sumf", "scala",
     assertResult(I(33)){
       top_eval[NoRep](A(A(Y(true), List(A(sumf(true), List(A(Y(true), List(fib(true))))))), List(I(7))))
     }
-    //)
+    )
   }
 
   def counter(c: Boolean) = L(c, "c", A(S("begin"),
