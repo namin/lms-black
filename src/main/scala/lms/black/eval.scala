@@ -98,10 +98,12 @@ object eval {
   }
 
   trait Ops[R[_]] {
+    type Tag[A]
+    implicit def valueTag: Tag[Value]
     implicit def lift(v: Value): R[Value]
     def app(m: MEnv, fun: R[Value], args: R[Value], env: Value, cont: Value): R[Value]
     def isTrue(v: R[Value]): R[Boolean]
-    def ifThenElse[A:Manifest](cond: R[Boolean], thenp: => R[A], elsep: => R[A]): R[A]
+    def ifThenElse[A:Tag](cond: R[Boolean], thenp: => R[A], elsep: => R[A]): R[A]
     def makeFun(m: MEnv, f: Fun[R]): R[Value]
     def makePair(car: R[Value], cdr: R[Value]): R[Value]
     def getCar(p: R[Value]): R[Value]
@@ -125,13 +127,15 @@ object eval {
   }
   type NoRep[A] = A
   implicit object OpsNoRep extends Ops[NoRep] {
+    type Tag[A] = Unit
+    def valueTag = ()
     def lift(v: Value) = v
     def app(m: MEnv, fun: Value, args: Value, env: Value, cont: Value) =
       static_apply[NoRep](m, fun, args, env, cont)
     def isTrue(v: Value) = v match {
       case B(b) => b
     }
-    def ifThenElse[A:Manifest](cond: Boolean, thenp: => A, elsep: => A): A = if (cond) thenp else elsep
+    def ifThenElse[A:Tag](cond: Boolean, thenp: => A, elsep: => A): A = if (cond) thenp else elsep
     def makeFun(m: MEnv, f: Fun[NoRep]) = evalfun(f)
     def makePair(car: Value, cdr: Value) = cons(car, cdr)
     def getCar(p: Value) = car(p)
@@ -491,30 +495,36 @@ object eval {
 import eval._
 import scala.lms.common._
 
-trait EvalDsl extends Functions with TupleOps with IfThenElse with Equal with UncheckedOps {
+trait EvalDsl extends Functions with IfThenElse with UncheckedOps with LiftBoolean {
+  implicit def valTyp: Typ[Value]
+  implicit def boolTyp: Typ[Boolean]
   def base_apply_rep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value): Rep[Value]
   def make_fun_rep(m: MEnv, f: Fun[Rep]): Rep[Value]
   implicit object OpsRep extends scala.Serializable with Ops[Rep] {
+    type Tag[A] = Typ[A]
+    def valueTag = typ[Value]
     def lift(v: Value) = unit(v)
     def app(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value) =
       base_apply_rep(m, f, args, env, cont)
-    def isTrue(v: Rep[Value]): Rep[Boolean] = unchecked("isTrue(", v, ")")//unit(B(false))!=v
-    def ifThenElse[A:Manifest](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A] = if (cond) thenp else elsep
+    def isTrue(v: Rep[Value]): Rep[Boolean] = unchecked[Boolean]("isTrue(", v, ")")//unit(B(false))!=v
+    def ifThenElse[A:Tag](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A] = if (cond) thenp else elsep
     def makeFun(m: MEnv, f: Fun[Rep]) = make_fun_rep(m, f)
     def makePair(car: Rep[Value], cdr: Rep[Value]) =
-      unchecked("makePair(", car, ", ", cdr, ")")
-    def getCar(p: Rep[Value]) = unchecked("getCar(", p, ")")
-    def getCdr(p: Rep[Value]) = unchecked("getCdr(", p, ")")
-    def cellNew(v: Rep[Value]) = unchecked("Code(cellNew(", v, "))")
-    def cellRead(c: Rep[Value]) = unchecked("cellRead(", c, ")")
-    def cellSet(c: Rep[Value], v: Rep[Value]) = unchecked("cellSet(", c, ", ", v, ")")
+      unchecked[Value]("makePair(", car, ", ", cdr, ")")
+    def getCar(p: Rep[Value]) = unchecked[Value]("getCar(", p, ")")
+    def getCdr(p: Rep[Value]) = unchecked[Value]("getCdr(", p, ")")
+    def cellNew(v: Rep[Value]) = unchecked[Value]("Code(cellNew(", v, "))")
+    def cellRead(c: Rep[Value]) = unchecked[Value]("cellRead(", c, ")")
+    def cellSet(c: Rep[Value], v: Rep[Value]) = unchecked[Value]("cellSet(", c, ", ", v, ")")
     def inRep = true
   }
 
   def snippet(v: Rep[Value]): Rep[Value]
 }
 
-trait EvalDslExp extends EvalDsl with EffectExp with FunctionsExp with TupleOpsExp with IfThenElseExp with EqualExp with UncheckedOpsExp {
+trait EvalDslExp extends EvalDsl with EffectExp with FunctionsExp with IfThenElseExp with UncheckedOpsExp {
+  implicit def valTyp: Typ[Value] = manifestTyp
+  implicit def boolTyp: Typ[Boolean] = manifestTyp
   case class BaseApplyRep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Rep[Value => Value]) extends Def[Value]
   def base_apply_rep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value): Rep[Value] = cont match {
     case Cont(key) => reflectEffect(BaseApplyRep(m, f, args, env, fun(conts(key).fun[Rep])))
@@ -536,7 +546,7 @@ trait EvalDslExp extends EvalDsl with EffectExp with FunctionsExp with TupleOpsE
   }
 }
 
-trait EvalDslGen extends ScalaGenFunctions with ScalaGenTupleOps with ScalaGenIfThenElse with ScalaGenEqual with ScalaGenUncheckedOps {
+trait EvalDslGen extends ScalaGenFunctions with ScalaGenIfThenElse with ScalaGenUncheckedOps {
   val IR: EvalDslExp
   import IR._
 
@@ -577,7 +587,7 @@ trait EvalDslImpl extends EvalDslExp { q =>
   val codegen = new EvalDslGen {
     val IR: q.type = q
 
-    override def remap[A](m: Manifest[A]): String = {
+    override def remap[A](m: Typ[A]): String = {
       val s = m.toString
       if (s=="scala.lms.black.eval$Value") "R[Value]"
       else super.remap(m)
@@ -588,8 +598,8 @@ trait EvalDslImpl extends EvalDslExp { q =>
       stream.println("import scala.lms.black.eval._")
     }
 
-    override def emitSource[A : Manifest](args: List[Sym[_]], body: Block[A], className: String, out: java.io.PrintWriter) = {
-      val sA = remap(manifest[A])
+    override def emitSource[A:Typ](args: List[Sym[_]], body: Block[A], className: String, out: java.io.PrintWriter) = {
+      val sA = remap(typ[A])
 
       val staticData = getFreeDataBlock(body)
 
