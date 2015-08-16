@@ -414,6 +414,10 @@ object eval {
   }
 
   def apply_primitive(p: String, args: Value): Value = (p, args) match {
+    case ("number?", P(a, N)) => B(a match {
+      case I(_) => true
+      case _ => false
+    })
     case ("<", P(I(a), P(I(b), N))) => B(a < b)
     case ("+", P(I(a), P(I(b), N))) => I(a+b)
     case ("-", P(I(a), P(I(b), N))) => I(a-b)
@@ -439,6 +443,7 @@ object eval {
     P(S("eval-application"), cell_new(evalfun(eval_application_fun))),
     P(S("eval-var"), cell_new(evalfun(eval_var_fun))),
     P(S("base-eval"), evalfun(base_eval_fun)),
+    P(S("number?"), Prim("number?")),
     P(S("<"), Prim("<")),
     P(S("+"), Prim("+")),
     P(S("-"), Prim("-")),
