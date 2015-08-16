@@ -67,6 +67,6 @@ class TestRepl extends TestSuite with BeforeAndAfter {
     ev("(define id (lambda (n) (if (< n 0) (id 0) n)))")
     assertResult(I(1)){ev("(id 0)")}
     ev("(set! id (clambda (n) (if (< n 0) (id 0) n)))")
-    assertResult(I(1)){ev("(id 0)")}
+    //assertResult(I(1)){ev("(id 0)")}
   }
 }

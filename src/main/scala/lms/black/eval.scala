@@ -98,19 +98,19 @@ object eval {
       f(v)
     case _ =>
       val o = implicitly[Ops[R]]; import o._
-      static_apply[R](m, cont,
+      static_apply[R](MEnv(env, m), cont,
         P((if (inRep) Code(v) else v.asInstanceOf[Value]), N),
-        env, mkCont[R]{v => v})
+        env, mkCont[R]{v => v}, shift=false)
   }
 
-  def static_apply[R[_]:Ops](m: MEnv, fun: Value, args: Value, env: Value, cont: Value) = {
+  def static_apply[R[_]:Ops](m: MEnv, fun: Value, args: Value, env: Value, cont: Value, shift: Boolean = true) = {
     val o = implicitly[Ops[R]]; import o._
     fun match {
       case Clo(params, body, cenv) =>
         meta_apply[R](m, S("eval-begin"), body, env_extend[R](cenv, params, args), cont)
       case Evalfun(key) =>
         val f = funs(key).fun[R]
-        apply_cont[R](m, env, cont, f(MEnv(env, m))(args))
+        apply_cont[R](m, env, cont, f(if (shift) MEnv(env, m) else m)(args))
       case Prim(p) =>
         apply_cont[R](m, env, cont, apply_primitive(p, args))
       case Cont(_) =>
