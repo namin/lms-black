@@ -60,13 +60,4 @@ class TestRepl extends TestSuite with BeforeAndAfter {
     assertResult(I(13)){ev("(fib 7)")}
     assertResult(I(0)){ev("(EM counter)")}
   }
-
-  test("user continuations") {
-    ev("(EM (define old-eval-var eval-var))")
-    ev("(EM (set! eval-var (clambda (e r k) (old-eval-var e r (clambda (a) (if (number? a) (k (+ a 1)) (k a)))))))")
-    ev("(define id (lambda (n) (if (< n 0) (id 0) n)))")
-    assertResult(I(1)){ev("(id 0)")}
-    ev("(set! id (clambda (n) (if (< n 0) (id 0) n)))")
-    assertResult(I(1)){ev("(id 0)")}
-  }
 }
