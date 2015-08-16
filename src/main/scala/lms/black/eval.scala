@@ -60,6 +60,7 @@ object eval {
     lazy val menv = _menv
   }
   object MEnv {
+    def apply(key: Int) = new MEnv(key)
     def apply(env: Value, _menv: => MEnv): MEnv = {
       val key = menvs.size
       menvs += (key -> new _MEnv(env, _menv))
@@ -91,10 +92,15 @@ object eval {
     case P(a, d) => d
   }
 
-  def apply_cont[R[_]:Ops](cont: Value, v: R[Value]): R[Value] = cont match {
+  def apply_cont[R[_]:Ops](m: MEnv, env: Value, cont: Value, v: R[Value]): R[Value] = cont match {
     case Cont(key) =>
       val f = conts(key).fun[R]
       f(v)
+    case _ =>
+      val o = implicitly[Ops[R]]; import o._
+      static_apply[R](m, cont,
+        P((if (inRep) Code(v) else v.asInstanceOf[Value]), N),
+        env, mkCont[R]{v => v})
   }
 
   def static_apply[R[_]:Ops](m: MEnv, fun: Value, args: Value, env: Value, cont: Value) = {
@@ -104,9 +110,11 @@ object eval {
         meta_apply[R](m, S("eval-begin"), body, env_extend[R](cenv, params, args), cont)
       case Evalfun(key) =>
         val f = funs(key).fun[R]
-        apply_cont[R](cont, f(MEnv(env, m))(args))
+        apply_cont[R](m, env, cont, f(MEnv(env, m))(args))
       case Prim(p) =>
-        apply_cont[R](cont, apply_primitive(p, args))
+        apply_cont[R](m, env, cont, apply_primitive(p, args))
+      case Cont(_) =>
+        apply_cont[R](m, env, fun, car(args))
     }
   }
 
@@ -155,10 +163,10 @@ object eval {
   def base_evlist[R[_]:Ops](m: MEnv, exps: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     exps match {
-      case N => apply_cont[R](cont, lift(N))
+      case N => apply_cont[R](m, env, cont, lift(N))
       case P(e, es) => base_eval[R](m, e, env, mkCont[R]({ v =>
         base_evlist[R](m, es, env, mkCont[R]({ vs =>
-          apply_cont[R](cont, makePair(v, vs))
+          apply_cont[R](m, env, cont, makePair(v, vs))
         }))
       }))
     }
@@ -173,7 +181,7 @@ object eval {
   def base_eval[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     exp match {
-      case I(_) | B(_) => apply_cont[R](cont, lift(exp))
+      case I(_) | B(_) => apply_cont[R](m, env, cont, lift(exp))
       case S(sym) => meta_apply[R](m, S("eval-var"), exp, env, cont)
       case P(S("lambda"), _) => meta_apply[R](m, S("eval-lambda"), exp, env, cont)
       case P(S("clambda"), _) => meta_apply[R](m, S("eval-clambda"), exp, env, cont)
@@ -226,9 +234,9 @@ object eval {
   def eval_var[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     env_get(env, exp) match {
-      case Code(v: R[Value]) => apply_cont[R](cont, cellRead(v))
-      case v@Cell(_) => apply_cont[R](cont, cellRead(v))
-      case v => apply_cont(cont, lift(v))
+      case Code(v: R[Value]) => apply_cont[R](m, env, cont, cellRead(v))
+      case v@Cell(_) => apply_cont[R](m, env, cont, cellRead(v))
+      case v => apply_cont(m, env, cont, lift(v))
     }
   }
 
@@ -243,7 +251,7 @@ object eval {
     val (params, body) = exp match {
       case P(_, P(params, body)) => (params, body)
     }
-    apply_cont(cont, lift(Clo(params, body, env)))
+    apply_cont(m, env, cont, lift(Clo(params, body, env)))
   }
 
   def eval_clambda_fun: Fun[NoRep] = new Fun[NoRep] {
@@ -267,18 +275,18 @@ object eval {
       }
       val r = new EvalDslDriver with Program
       r.precompile
-      apply_cont(cont, lift(evalfun(r.f)))
+      apply_cont(m, env, cont, lift(evalfun(r.f)))
     } else {
       val f = makeFun(m, new Fun[R] {
         def fun[RF[_]:Ops] = ( m2 => {
           ((v: R[Value]) => {
-            meta_apply[RF](m2, S("eval-begin"), body,
+            meta_apply[RF](m, S("eval-begin"), body,
               env_extend[RF](env, params, Code(v)),
               mkCont[R]{v => v})
           })
         })
       })
-      apply_cont(cont, f)
+      apply_cont(m, env, cont, f)
     }
   }
 
@@ -314,7 +322,7 @@ object eval {
     base_eval[R](m, body, env, mkCont[R]({ v =>
       val p = env_get(env, name)
       cellSet(lift(p), v)
-      apply_cont(cont, name)
+      apply_cont(m, env, cont, name)
     }))
   }
 
@@ -334,7 +342,7 @@ object eval {
         case P(c@Cell(key), _) => (c, cells(key))
       }
       cellSet(lift(c), makePair(makePair(name, cellNew(v)), frame))
-      apply_cont(cont, name)
+      apply_cont(m, env, cont, name)
     }))
   }
 
@@ -349,7 +357,7 @@ object eval {
     val e = exp match {
       case P(_, P(e, N)) => e
     }
-    apply_cont(cont, e)
+    apply_cont(m, env, cont, e)
   }
 
   def eval_EM_fun: Fun[NoRep] = new Fun[NoRep] {
@@ -365,7 +373,7 @@ object eval {
     }
     val MEnv(meta_env, meta_menv) = m
     base_eval[R](meta_menv, e, meta_env, mkCont[R]{v =>
-      apply_cont(cont, v)
+      apply_cont(m, env, cont, v)
     })
   }
 
@@ -512,16 +520,16 @@ trait EvalDsl extends Functions with IfThenElse with UncheckedOps with LiftBoole
     def lift(v: Value) = unit(v)
     def app(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value) =
       base_apply_rep(m, f, args, env, cont)
-    def isTrue(v: Rep[Value]): Rep[Boolean] = unchecked[Boolean]("isTrue(", v, ")")//unit(B(false))!=v
+    def isTrue(v: Rep[Value]): Rep[Boolean] = unchecked[Boolean]("o.isTrue(", v, ")")//unit(B(false))!=v
     def ifThenElse[A:Tag](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A] = if (cond) thenp else elsep
     def makeFun(m: MEnv, f: Fun[Rep]) = make_fun_rep(m, f)
     def makePair(car: Rep[Value], cdr: Rep[Value]) =
-      unchecked[Value]("makePair(", car, ", ", cdr, ")")
-    def getCar(p: Rep[Value]) = unchecked[Value]("getCar(", p, ")")
-    def getCdr(p: Rep[Value]) = unchecked[Value]("getCdr(", p, ")")
-    def cellNew(v: Rep[Value]) = unchecked[Value]("Code(cellNew(", v, "))")
-    def cellRead(c: Rep[Value]) = unchecked[Value]("cellRead(", c, ")")
-    def cellSet(c: Rep[Value], v: Rep[Value]) = unchecked[Value]("cellSet(", c, ", ", v, ")")
+      unchecked[Value]("o.makePair(", car, ", ", cdr, ")")
+    def getCar(p: Rep[Value]) = unchecked[Value]("o.getCar(", p, ")")
+    def getCdr(p: Rep[Value]) = unchecked[Value]("o.getCdr(", p, ")")
+    def cellNew(v: Rep[Value]) = unchecked[Value]("Code(o.cellNew(", v, "))")
+    def cellRead(c: Rep[Value]) = unchecked[Value]("o.cellRead(", c, ")")
+    def cellSet(c: Rep[Value], v: Rep[Value]) = unchecked[Value]("o.cellSet(", c, ", ", v, ")")
     def inRep = true
   }
 
@@ -556,12 +564,6 @@ trait EvalDslGen extends ScalaGenFunctions with ScalaGenIfThenElse with ScalaGen
   val IR: EvalDslExp
   import IR._
 
-  def hasCode(v: Value): Boolean = v match {
-    case Code(c) => true
-    case P(a, b) => hasCode(a) || hasCode(b)
-    case Clo(a, b, c) => hasCode(a) || hasCode(b) || hasCode(c)
-    case _ => false
-  }
   override def quote(x: Exp[Any]) : String = x match {
     case Const(P(a, b)) => "P("+quote(Const(a))+", "+quote(Const(b))+")"
     case Const(Code(c)) => quote(c.asInstanceOf[Rep[Any]])
@@ -570,15 +572,15 @@ trait EvalDslGen extends ScalaGenFunctions with ScalaGenIfThenElse with ScalaGen
   }
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case BaseApplyRep(m, f, args, env, cont) =>
-      emitValDef(sym, "base_apply[R](m, "+quote(f)+", "+quote(args)+", "+quote(Const(env))+", mkCont[R]("+quote(cont)+"))")
+      emitValDef(sym, "base_apply[R]("+m+", "+quote(f)+", "+quote(args)+", "+quote(Const(env))+", mkCont[R]("+quote(cont)+".asInstanceOf[R[Value] => R[Value]]))")
     case EvalfunRep(x, y) =>
-      stream.println("val f_"+quote(sym)+" = {(" + quote(x) + ": Value) => ")
+      emitValDef(sym, "evalfun (new Fun[NoRep] { def fun[R[_]:Ops] = { m => {(" + quote(x) + ": Value) => ")
+      stream.println("val o = implicitly[Ops[R]]; import o._")
       emitBlock(y)
       stream.println(quote(getBlockResult(y)) + ": R[Value]")
-      stream.println("}")
-      emitValDef(sym, "evalfun (new Fun[NoRep] { def fun[R[_]:Ops] = { m2 => f_"+quote(sym)+".asInstanceOf[Value => R[Value]] }})")
+      stream.println("}}})")
     case IfThenElse(c,a,b) =>
-      stream.println("val " + quote(sym) + " = ifThenElse((" + quote(c) + "), {")
+      stream.println("val " + quote(sym) + " = o.ifThenElse((" + quote(c) + "), {")
       emitBlock(a)
       stream.println(quote(getBlockResult(a)))
       stream.println("}, {")
