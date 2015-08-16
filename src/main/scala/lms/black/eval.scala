@@ -37,7 +37,7 @@ object eval {
     case Code(cc) => cell_set(cc.asInstanceOf[Value], v)
   }
   abstract class Fun[W[_]:Ops] extends Serializable {
-    def fun[R[_]:Ops]: MEnv => W[Value] => R[Value]
+    def fun[R[_]:Ops](implicit ev: Convert[W,R]): MEnv => W[Value] => R[Value]
   }
   var funs = Map[Int, Fun[NoRep]]()
   def addFun(f: Fun[NoRep]): Int = {
@@ -118,6 +118,16 @@ object eval {
     }
   }
 
+  trait Convert[W[_], R[_]] {
+    implicit def convert(v: W[Value]): R[Value]
+  }
+  implicit def convertNoRep[R[_]:Ops] = new Convert[NoRep, R] {
+    val o = implicitly[Ops[R]]
+    def convert(v: Value) = o.lift(v)
+  }
+  implicit def convertSame[R[_]] = new Convert[R, R] {
+    def convert(v: R[Value]) = v
+  }
   trait Ops[R[_]] {
     type Tag[A]
     implicit def valueTag: Tag[Value]
@@ -173,7 +183,7 @@ object eval {
   }
 
   def base_eval_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops] = { m => { (vc: Value) =>
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
       val P(exp, P(env, P(cont, N))) = vc
       base_eval[R](m, exp, env, cont)
     }}
@@ -196,7 +206,7 @@ object eval {
   }
 
   def eval_begin_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops] = { m => { (vc: Value) =>
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
       val P(body, P(env, P(cont, N))) = vc
       eval_begin[R](m, body, env, cont)
     }}
@@ -210,7 +220,7 @@ object eval {
     }
 
   def eval_application_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops] = { m => { (vc: Value) =>
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
       val P(exp, P(env, P(cont, N))) = vc
       eval_application[R](m, exp, env, cont)
     }}
@@ -226,7 +236,7 @@ object eval {
   }
 
   def eval_var_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops] = { m => { (vc: Value) =>
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
       val P(exp, P(env, P(cont, N))) = vc
       eval_var[R](m, exp, env, cont)
     }}
@@ -241,7 +251,7 @@ object eval {
   }
 
   def eval_lambda_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops] = { m => { (vc: Value) =>
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
       val P(exp, P(env, P(cont, N))) = vc
       eval_lambda[R](m, exp, env, cont)
     }}
@@ -255,7 +265,7 @@ object eval {
   }
 
   def eval_clambda_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops] = { m => { (vc: Value) =>
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
       val P(exp, P(env, P(cont, N))) = vc
       eval_clambda[R](m, exp, env, cont)
     }}
@@ -278,20 +288,20 @@ object eval {
       apply_cont(m, env, cont, lift(evalfun(r.f)))
     } else {
       val f = makeFun(m, new Fun[R] {
-        def fun[RF[_]:Ops] = ( m2 => {
+        def fun[RF[_]:Ops](implicit ev: Convert[R,RF]) = {(m2: MEnv) => {
           ((v: R[Value]) => {
             meta_apply[RF](m, S("eval-begin"), body,
               env_extend[RF](env, params, Code(v)),
               mkCont[R]{v => v})
           })
-        })
+        }}
       })
       apply_cont(m, env, cont, f)
     }
   }
 
   def eval_if_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops] = { m => { (vc: Value) =>
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
       val P(exp, P(env, P(cont, N))) = vc
       eval_if[R](m, exp, env, cont)
     }}
@@ -309,7 +319,7 @@ object eval {
   }
 
   def eval_set_bang_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops] = { m => { (vc: Value) =>
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
       val P(exp, P(env, P(cont, N))) = vc
       eval_set_bang[R](m, exp, env, cont)
     }}
@@ -327,7 +337,7 @@ object eval {
   }
 
   def eval_define_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops] = { m => { (vc: Value) =>
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
       val P(exp, P(env, P(cont, N))) = vc
       eval_define[R](m, exp, env, cont)
     }}
@@ -347,7 +357,7 @@ object eval {
   }
 
   def eval_quote_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops] = { m => { (vc: Value) =>
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
       val P(exp, P(env, P(cont, N))) = vc
       eval_quote[R](m, exp, env, cont)
     }}
@@ -361,7 +371,7 @@ object eval {
   }
 
   def eval_EM_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops] = { m => { (vc: Value) =>
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
       val P(exp, P(env, P(cont, N))) = vc
       eval_EM[R](m, exp, env, cont)
     }}
@@ -572,12 +582,13 @@ trait EvalDslGen extends ScalaGenFunctions with ScalaGenIfThenElse with ScalaGen
   }
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case BaseApplyRep(m, f, args, env, cont) =>
-      emitValDef(sym, "base_apply[R]("+m+", "+quote(f)+", "+quote(args)+", "+quote(Const(env))+", mkCont[R]("+quote(cont)+".asInstanceOf[R[Value] => R[Value]]))")
+      emitValDef(sym, "o.app("+m+", "+quote(f)+", "+quote(args)+", "+quote(Const(env))+", mkCont[R]("+quote(cont)+".asInstanceOf[R[Value] => R[Value]]))")
     case EvalfunRep(x, y) =>
-      emitValDef(sym, "evalfun (new Fun[NoRep] { def fun[R[_]:Ops] = { m => {(" + quote(x) + ": Value) => ")
-      stream.println("val o = implicitly[Ops[R]]; import o._")
+      emitValDef(sym, "o.makeFun(m, new Fun[R] { def fun[R2[_]:Ops](implicit ev: Convert[R,R2]) = { (m: MEnv) => {(" + quote(x) + ": R[Value]) => ")
+      stream.println("val o = implicitly[Ops[R2]]; import o._")
+      stream.println("import ev._")
       emitBlock(y)
-      stream.println(quote(getBlockResult(y)) + ": R[Value]")
+      stream.println(quote(getBlockResult(y)) + ": R2[Value]")
       stream.println("}}})")
     case IfThenElse(c,a,b) =>
       stream.println("val " + quote(sym) + " = o.ifThenElse((" + quote(c) + "), {")
@@ -620,8 +631,8 @@ trait EvalDslImpl extends EvalDslExp { q =>
         stream.println("class "+className+(if (staticData.isEmpty) "" else "("+staticData.map(p=>"p"+quote(p._1)+":"+p._1.tp).mkString(",")+")")+" extends Fun[NoRep] with (Value => Value) {")
 
         stream.println("def apply(v: Value): Value = v")
-        stream.println("def fun[R[_]:Ops] = { m => { v => fun[R](m, v)  } }")
-        stream.println("def fun[R[_]:Ops](m: MEnv, "+args.map(a => quote(a) + ":" + "Value"/*remap(a.tp)*/).mkString(", ")+"): "+sA+" = {")
+        stream.println("def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { v => fun[R](m, v)(implicitly[Ops[R]], ev)  } }")
+        stream.println("def fun[R[_]:Ops](m: MEnv, "+args.map(a => quote(a) + ":" + "Value"/*remap(a.tp)*/).mkString(", ")+")(implicit ev: Convert[NoRep,R]): "+sA+" = {")
         stream.println("val o = implicitly[Ops[R]]; import o._")
 
         emitBlock(body)
