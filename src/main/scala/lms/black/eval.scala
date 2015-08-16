@@ -97,6 +97,19 @@ object eval {
       f(v)
   }
 
+  def static_apply[R[_]:Ops](m: MEnv, fun: Value, args: Value, env: Value, cont: Value) = {
+    val o = implicitly[Ops[R]]; import o._
+    fun match {
+      case Clo(params, body, cenv) =>
+        meta_apply[R](m, S("eval-begin"), body, env_extend[R](cenv, params, args), cont)
+      case Evalfun(key) =>
+        val f = funs(key).fun[R]
+        apply_cont[R](cont, f(MEnv(env, m))(args))
+      case Prim(p) =>
+        apply_cont[R](cont, apply_primitive(p, args))
+    }
+  }
+
   trait Ops[R[_]] {
     type Tag[A]
     implicit def valueTag: Tag[Value]
@@ -112,18 +125,6 @@ object eval {
     def cellRead(c: R[Value]): R[Value]
     def cellSet(c: R[Value], v: R[Value]): R[Value]
     def inRep: Boolean
-  }
-  def static_apply[R[_]:Ops](m: MEnv, fun: Value, args: Value, env: Value, cont: Value) = {
-    val o = implicitly[Ops[R]]; import o._
-    fun match {
-      case Clo(params, body, cenv) =>
-        meta_apply[R](m, S("eval-begin"), body, env_extend[R](cenv, params, args), cont)
-      case Evalfun(key) =>
-        val f = funs(key).fun[R]
-        apply_cont[R](cont, f(MEnv(env, m))(args))
-      case Prim(p) =>
-        apply_cont[R](cont, apply_primitive(p, args))
-    }
   }
   type NoRep[A] = A
   implicit object OpsNoRep extends Ops[NoRep] {
