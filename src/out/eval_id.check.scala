@@ -1,17 +1,18 @@
-// /*****************************************
+/*****************************************
 Emitting Generated Code
 *******************************************/
 import language.higherKinds
 import scala.lms.black.eval._
-class staged$0 extends Fun[NoRep] with (((Value, Cont[NoRep])) => Value) {
-  def apply(v: (Value, Cont[NoRep])): Value = v._2(v._1)
-  def fun[R[_]:Ops] = { v => fun[R]((v._1, v._2))  }
-  def fun[R[_]:Ops](x0:(Value, Cont[R])): R[Value] = {
+class staged$0 extends Fun[NoRep] with (Value => Value) {
+  def apply(v: Value): Value = v
+  def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { v => fun[R](m, v)(implicitly[Ops[R]], ev)  } }
+  def fun[R[_]:Ops](m: MEnv, x0:Value)(implicit ev: Convert[NoRep,R]): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
-    val x1 = x0._1
-    val x2 = x0._2
-    val x3 = x2(x1)
-    x3
+    val x1 = o.getCar(x0)
+    val x2 = Code(o.cellNew(x1))
+    val x3 = o.getCdr(x0)
+    val x4 = o.cellRead(x2)
+    x4
   }
 }
 /*****************************************

@@ -21,9 +21,9 @@ class TestEvaluator extends TestSuite {
   }
 
   test ("id compiled") {
-    //checkOut("id", "scala",
+    checkOut("id", "scala",
       assertResult(I(1)){top_eval[NoRep](ex_id(true))}
-    //)
+    )
   }
 
   def Y(c: Boolean) = L(c, "fun", A(L(c, "F", A(V("F"), List(V("F")))), List(L(c, "F", A(V("fun"), List(L(c, "x", A(A(V("F"), List(V("F"))), List(V("x"))))))))))
