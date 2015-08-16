@@ -574,6 +574,9 @@ trait EvalDslGen extends ScalaGenFunctions with ScalaGenIfThenElse with ScalaGen
   val IR: EvalDslExp
   import IR._
 
+  var rs = List[Int]()
+  def quoteR = "R"+(if (rs.isEmpty) "" else rs.head.toString)
+
   override def quote(x: Exp[Any]) : String = x match {
     case Const(P(a, b)) => "P("+quote(Const(a))+", "+quote(Const(b))+")"
     case Const(Code(c)) => quote(c.asInstanceOf[Rep[Any]])
@@ -582,13 +585,17 @@ trait EvalDslGen extends ScalaGenFunctions with ScalaGenIfThenElse with ScalaGen
   }
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case BaseApplyRep(m, f, args, env, cont) =>
-      emitValDef(sym, "o.app("+m+", "+quote(f)+", "+quote(args)+", "+quote(Const(env))+", mkCont[R]("+quote(cont)+".asInstanceOf[R[Value] => R[Value]]))")
+      emitValDef(sym, "o.app("+m+", "+quote(f)+", "+quote(args)+", "+quote(Const(env))+", mkCont[R]("+quote(cont)+"))")
     case EvalfunRep(x, y) =>
-      emitValDef(sym, "o.makeFun(m, new Fun[R] { def fun[R2[_]:Ops](implicit ev: Convert[R,R2]) = { (m: MEnv) => {(" + quote(x) + ": R[Value]) => ")
-      stream.println("val o = implicitly[Ops[R2]]; import o._")
+      val r = quoteR
+      rs = rs.size::rs
+      val r2 = quoteR
+      emitValDef(sym, "o.makeFun(m, new Fun["+r+"] { def fun["+r2+"[_]:Ops](implicit ev: Convert["+r+","+r2+"]) = { (m: MEnv) => {(" + quote(x) + ": "+r+"[Value]) => ")
+      stream.println("val o = implicitly[Ops["+r2+"]]; import o._")
       stream.println("import ev._")
       emitBlock(y)
-      stream.println(quote(getBlockResult(y)) + ": R2[Value]")
+      stream.println(quote(getBlockResult(y)) + ": "+r2+"[Value]")
+      rs = rs.tail
       stream.println("}}})")
     case IfThenElse(c,a,b) =>
       stream.println("val " + quote(sym) + " = o.ifThenElse((" + quote(c) + "), {")
