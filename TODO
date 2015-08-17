@@ -1,4 +1,4 @@
 * Add a black-like REPL
 * Decide on correctness of MEnv argument
-* Investigate appearances of Cont(INT_KEY) in last REPL example
+OK * Investigate appearances of Cont(INT_KEY) in last REPL example
 * Reconsider overall architecture
