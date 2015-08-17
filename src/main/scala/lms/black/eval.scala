@@ -572,8 +572,10 @@ trait EvalDslExp extends EvalDsl with EffectExp with FunctionsExp with IfThenEls
     case _ => MakePairRep(car, cdr)
   }
 
-  def is_true_rep(cond: Rep[Value]) = reflectEffect(IsTrueRep(cond))
-
+  def is_true_rep(cond: Rep[Value]) = cond match {
+    case Const(B(b)) => Const(b)
+    case _ => IsTrueRep(cond)
+  }
   var cell_es = Map[Rep[Value], Rep[Value]]()
   def cell_new_rep(v: Rep[Value]) = {
     val c = reflectEffect(CellNewRep(v))
