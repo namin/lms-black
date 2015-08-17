@@ -53,8 +53,7 @@ class TestRepl extends TestSuite with BeforeAndAfter {
     ev("(EM (set! eval-application old-eval-application))")
     ev("(EM (set! counter 0))")
     assertResult(I(987)){ev("(fib 16)")}
-    // NB: the recursive calls are not counted!
-    assertResult(I(4789)){ev("(EM counter)")}
+    assertResult(I(11173)){ev("(EM counter)")}
     ev("(set! fib (lambda (n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2))))))")
     ev("(EM (set! counter 0))")
     assertResult(I(13)){ev("(fib 7)")}
