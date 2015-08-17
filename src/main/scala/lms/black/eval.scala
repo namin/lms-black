@@ -523,7 +523,7 @@ object eval {
 import eval._
 import scala.lms.common._
 
-trait EvalDsl extends Functions with IfThenElse with UncheckedOps with LiftBoolean {
+trait EvalDsl extends IfThenElse with LiftBoolean {
   implicit def valTyp: Typ[Value]
   implicit def boolTyp: Typ[Boolean]
   def base_apply_rep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value): Rep[Value]
@@ -557,7 +557,7 @@ trait EvalDsl extends Functions with IfThenElse with UncheckedOps with LiftBoole
   def snippet(v: Rep[Value]): Rep[Value]
 }
 
-trait EvalDslExp extends EvalDsl with EffectExp with FunctionsExp with IfThenElseExp with UncheckedOpsExp {
+trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
   implicit def valTyp: Typ[Value] = manifestTyp
   implicit def boolTyp: Typ[Boolean] = manifestTyp
 
@@ -655,7 +655,7 @@ trait EvalDslExp extends EvalDsl with EffectExp with FunctionsExp with IfThenEls
   }
 }
 
-trait EvalDslGen extends ScalaGenFunctions with ScalaGenIfThenElse with ScalaGenUncheckedOps {
+trait EvalDslGen extends ScalaGenIfThenElse {
   val IR: EvalDslExp
   import IR._
 
