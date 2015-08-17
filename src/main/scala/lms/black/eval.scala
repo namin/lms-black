@@ -31,6 +31,7 @@ object eval {
   def cell_read(c: Value): Value = c match {
     case Cell(key) => cells(key)
     case Code(cc) => cell_read(cc.asInstanceOf[Value])
+    case _ => c
   }
   def cell_set(c: Value, v: Value): Value = c match {
     case Cell(key) => cells += (key -> v); v
@@ -667,7 +668,7 @@ trait EvalDslGen extends ScalaGenFunctions with ScalaGenIfThenElse with ScalaGen
     case _ => quote(x)
   }
   def quoteInP(x: Value) : String = x match {
-    case Code(Def(Reflect(CellNewRep(_), _, _))) => "Code("+quote(Const(x))+")"
+    case Code(_) => "Code("+quote(Const(x))+")"
     case _ => quote(Const(x))
   }
   override def quote(x: Exp[Any]) : String = x match {
@@ -681,11 +682,14 @@ trait EvalDslGen extends ScalaGenFunctions with ScalaGenIfThenElse with ScalaGen
     case CdrRep(p) => emitValDef(sym, quoteO+".getCdr("+quoteL(p)+")")
     case IsTrueRep(cond) => emitValDef(sym, quoteO+".isTrue("+quoteL(cond)+")")
     case CellSetRep(c, v) => emitValDef(sym, quoteO+".cellSet("+quoteL(c)+", "+quoteL(v)+")")
-    case CellNewRep(c) => emitValDef(sym, quoteO+".cellNew("+quoteL(c)+")")
     case MakePairRep(a, b) => emitValDef(sym, quoteO+".makePair("+quoteL(a)+", "+quoteL(b)+")")
     case CellReadRep(c) => emitValDef(sym, cell_es.get(c) match {
-      case Some(v) => quote(v)
+      case Some(v) => quoteL(v)
       case None => quoteO+".cellRead("+quote(c)+")"
+    })
+    case CellNewRep(v) => emitValDef(sym, cell_es.get(sym.asInstanceOf[Exp[Value]]) match {
+      case Some(_) => quoteL(v)
+      case None => quoteO+".cellNew("+quote(v)+")"
     })
     case BaseApplyRep(m, f, args, env, cont_x, cont_y) =>
       emitValDef(sym, quoteO+".app("+m+", "+quoteL(f)+", "+quoteL(args)+", "+quote(Const(env))+", mkCont["+quoteR+"]{("+quote(cont_x)+": "+quoteR+"[Value]) =>")
