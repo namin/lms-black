@@ -620,6 +620,11 @@ trait EvalDslExp extends EvalDsl with EffectExp with FunctionsExp with IfThenEls
       val r = apply_primitive(p, vs)
       val fn = conts(key).fun[Rep]
       fn(Const(r))
+    case (Const(Evalfun(ekey)), Const(vs@P(_, _)), Cont(key)) if !hasCode(vs) =>
+      val efn = funs(key).fun[Rep]
+      val r = efn(MEnv(env, m))(vs)
+      val fn = conts(key).fun[Rep]
+      fn(r)
     case (_, _, Cont(key)) => 
       val x = fresh[Value]
       val y = reifyEffects{
