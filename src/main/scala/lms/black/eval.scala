@@ -616,12 +616,14 @@ trait EvalDslExp extends EvalDsl with EffectExp with FunctionsExp with IfThenEls
     case Clo(a, b, c) => hasCode(a) || hasCode(b) || hasCode(c)
     case _ => false
   }
+  var omit_reads = Set[Rep[Value]]()
   def base_apply_rep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value): Rep[Value] = (f, args, cont) match {
     case (Const(Prim(p)), Const(vs@P(_, _)), Cont(key)) if !hasCode(vs) =>
       val r = apply_primitive(p, vs)
       val fn = conts(key).fun[Rep]
       fn(Const(r))
     case (Def(Reflect(CellReadRep(Const(Cell(cid))), _, _)), Const(vs@P(a, P(_, P(_, N)))), Cont(key)) if !hasCode(a) =>
+      omit_reads += f
       val Evalfun(ekey) = cells(cid)
       val efn = funs(ekey).fun[Rep]
       val r = efn(MEnv(env, m))(vs)
@@ -683,7 +685,8 @@ trait EvalDslGen extends ScalaGenFunctions with ScalaGenIfThenElse with ScalaGen
     case IsTrueRep(cond) => emitValDef(sym, quoteO+".isTrue("+quoteL(cond)+")")
     case CellSetRep(c, v) => emitValDef(sym, quoteO+".cellSet("+quoteL(c)+", "+quoteL(v)+")")
     case MakePairRep(a, b) => emitValDef(sym, quoteO+".makePair("+quoteL(a)+", "+quoteL(b)+")")
-    case CellReadRep(c) => emitValDef(sym, cell_es.get(c) match {
+    case CellReadRep(c) => if (!omit_reads.contains(sym.asInstanceOf[Exp[Value]]))
+      emitValDef(sym, cell_es.get(c) match {
       case Some(v) => quoteL(v)
       case None => quoteO+".cellRead("+quote(c)+")"
     })
