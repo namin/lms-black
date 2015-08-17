@@ -128,6 +128,9 @@ object eval {
   implicit def convertSame[R[_]] = new Convert[R, R] {
     def convert(v: R[Value]) = v
   }
+  def convertTrans[R1[_],R2[_],R3[_]](implicit ev12: Convert[R1, R2], ev23: Convert[R2,R3]) = new Convert[R1,R3] {
+    def convert(v: R1[Value]) = ev23.convert(ev12.convert(v))
+  }
   trait Ops[R[_]] {
     type Tag[A]
     implicit def valueTag: Tag[Value]
@@ -526,6 +529,8 @@ trait EvalDsl extends Functions with IfThenElse with UncheckedOps with LiftBoole
   def make_fun_rep(m: MEnv, f: Fun[Rep]): Rep[Value]
   def get_car_rep(p: Rep[Value]): Rep[Value]
   def get_cdr_rep(p: Rep[Value]): Rep[Value]
+  def make_pair_rep(car: Rep[Value], cdr: Rep[Value]): Rep[Value]
+  def is_true_rep(cond: Rep[Value]): Rep[Boolean]
   def cell_new_rep(v: Rep[Value]): Rep[Value]
   def cell_read_rep(c: Rep[Value]): Rep[Value]
   def cell_set_rep(c: Rep[Value], v: Rep[Value]): Rep[Value]
@@ -535,13 +540,12 @@ trait EvalDsl extends Functions with IfThenElse with UncheckedOps with LiftBoole
     def lift(v: Value) = unit(v)
     def app(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value) =
       base_apply_rep(m, f, args, env, cont)
-    def isTrue(v: Rep[Value]): Rep[Boolean] = unchecked[Boolean]("o.isTrue(", v, ")")
+    def isTrue(v: Rep[Value]): Rep[Boolean] = is_true_rep(v)
     def ifThenElse[A:Tag](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A] = if (cond) thenp else elsep
     def makeFun(m: MEnv, f: Fun[Rep]) = make_fun_rep(m, f)
-    def makePair(car: Rep[Value], cdr: Rep[Value]) =
-      unchecked[Value]("o.makePair(", car, ", ", cdr, ")")
-    def getCar(p: Rep[Value]) = get_car_rep(p)//unchecked[Value]("o.getCar(", p, ")")
-    def getCdr(p: Rep[Value]) = get_cdr_rep(p)//unchecked[Value]("o.getCdr(", p, ")")
+    def makePair(car: Rep[Value], cdr: Rep[Value]) = make_pair_rep(car, cdr)
+    def getCar(p: Rep[Value]) = get_car_rep(p)
+    def getCdr(p: Rep[Value]) = get_cdr_rep(p)
     def cellNew(v: Rep[Value]) = cell_new_rep(v)
     def cellRead(c: Rep[Value]) = cell_read_rep(c)
     def cellSet(c: Rep[Value], v: Rep[Value]) = cell_set_rep(c, v)
@@ -555,10 +559,20 @@ trait EvalDslExp extends EvalDsl with EffectExp with FunctionsExp with IfThenEls
   implicit def valTyp: Typ[Value] = manifestTyp
   implicit def boolTyp: Typ[Boolean] = manifestTyp
 
-  var cell_es = Map[Rep[Value], Rep[Value]]()
+  case class CarRep(p: Rep[Value]) extends Def[Value]
+  case class CdrRep(p: Rep[Value]) extends Def[Value]
+  case class MakePairRep(car: Rep[Value], cdr: Rep[Value]) extends Def[Value]
+  case class IsTrueRep(cond: Rep[Value]) extends Def[Boolean]
   case class CellReadRep(c: Rep[Value]) extends Def[Value]
+  case class CellSetRep(c: Rep[Value], v: Rep[Value]) extends Def[Value]
+  case class CellNewRep(v: Rep[Value]) extends Def[Value]
+
+  def make_pair_rep(car: Rep[Value], cdr: Rep[Value]) = reflectEffect(MakePairRep(car, cdr))
+  def is_true_rep(cond: Rep[Value]) = reflectEffect(IsTrueRep(cond))
+
+  var cell_es = Map[Rep[Value], Rep[Value]]()
   def cell_new_rep(v: Rep[Value]) = {
-    val c = unchecked[Value]("Code(o.cellNew(", v, "))")
+    val c = reflectEffect(CellNewRep(v))
     cell_es += (c -> v)
     c
   }
@@ -569,17 +583,16 @@ trait EvalDslExp extends EvalDsl with EffectExp with FunctionsExp with IfThenEls
       case _ => c
     }
     cell_es -= uc
-    unchecked[Value]("o.cellSet(", c, ", ", v, ")")
+    reflectEffect(CellSetRep(c, v))
   }
-
 
   def get_car_rep(p: Rep[Value]) = p match {
     case Const(P(a, b)) => Const(a)
-    case _ => uncheckedPure[Value]("o.getCar(", p, ")")
+    case _ => CarRep(p)
   }
   def get_cdr_rep(p: Rep[Value]) = p match {
     case Const(P(a, b)) => Const(b)
-    case _ => uncheckedPure[Value]("o.getCdr(", p, ")")
+    case _ => CdrRep(p)
   }
 
   case class BaseApplyRep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont_x: Sym[Value], cont_y: Block[Value]) extends Def[Value]
@@ -616,42 +629,68 @@ trait EvalDslGen extends ScalaGenFunctions with ScalaGenIfThenElse with ScalaGen
 
   var rs = List[Int]()
   def quoteR = "R"+(if (rs.isEmpty) "" else rs.head.toString)
+  def quoteO = if (rs.isEmpty) "o" else "o"+(rs.head.toString)
+  def quoteEv = if (rs.isEmpty) "ev" else "ev"+(rs.head.toString)
 
+  def quoteL(x: Exp[Any]) : String = x match {
+    case Const(Code(e: Exp[Any])) => quote(e)
+    case Const(v: Value) => quoteO+".lift("+quote(x)+")"
+    case _ => quote(x)
+  }
+  def quoteInP(x: Value) : String = x match {
+    case Code(Def(Reflect(CellNewRep(_), _, _))) => "Code("+quote(Const(x))+")"
+    case _ => quote(Const(x))
+  }
   override def quote(x: Exp[Any]) : String = x match {
-    case Const(P(a, b)) => "P("+quote(Const(a))+", "+quote(Const(b))+")"
+    case Const(P(a, b)) => "P("+quoteInP(a)+", "+quoteInP(b)+")"
     case Const(Code(c)) => quote(c.asInstanceOf[Rep[Any]])
     case Const(Clo(param, body, env)) =>  "Clo("+quote(Const(param))+", "+quote(Const(body))+", "+quote(Const(env))+")"
     case _ => super.quote(x)
   }
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
+    case CarRep(p) => emitValDef(sym, quoteO+".getCar("+quoteL(p)+")")
+    case CdrRep(p) => emitValDef(sym, quoteO+".getCdr("+quoteL(p)+")")
+    case IsTrueRep(cond) => emitValDef(sym, quoteO+".isTrue("+quoteL(cond)+")")
+    case CellSetRep(c, v) => emitValDef(sym, quoteO+".cellSet("+quoteL(c)+", "+quoteL(v)+")")
+    case CellNewRep(c) => emitValDef(sym, quoteO+".cellNew("+quoteL(c)+")")
+    case MakePairRep(a, b) => emitValDef(sym, quoteO+".makePair("+quoteL(a)+", "+quoteL(b)+")")
     case CellReadRep(c) => emitValDef(sym, cell_es.get(c) match {
       case Some(v) => quote(v)
-      case None => "o.cellRead("+quote(c)+")"
+      case None => quoteO+".cellRead("+quote(c)+")"
     })
     case BaseApplyRep(m, f, args, env, cont_x, cont_y) =>
-      emitValDef(sym, "o.app("+m+", "+quote(f)+", "+quote(args)+", "+quote(Const(env))+", mkCont["+quoteR+"]{("+quote(cont_x)+": "+quoteR+"[Value]) =>")
+      emitValDef(sym, quoteO+".app("+m+", "+quoteL(f)+", "+quoteL(args)+", "+quote(Const(env))+", mkCont["+quoteR+"]{("+quote(cont_x)+": "+quoteR+"[Value]) =>")
       emitBlock(cont_y)
-      stream.println(quote(getBlockResult(cont_y)) + ": "+quoteR+"[Value]")
+      stream.println(quoteL(getBlockResult(cont_y)) + ": "+quoteR+"[Value]")
       stream.println("})")
     case EvalfunRep(x, y) =>
       val r = quoteR
+      val oldO = quoteO
+      val oldEv = quoteEv
       rs = rs.size::rs
       val r2 = quoteR
-      emitValDef(sym, "o.makeFun(m, new Fun["+r+"] { def fun["+r2+"[_]:Ops](implicit ev: Convert["+r+","+r2+"]) = { (m: MEnv) => {(" + quote(x) + ": "+r+"[Value]) => ")
-      stream.println("val o = implicitly[Ops["+r2+"]]; import o._")
-      stream.println("import ev._")
+      emitValDef(sym, oldO+".makeFun(m, new Fun["+r+"] { def fun["+r2+"[_]:Ops](implicit "+quoteEv+": Convert["+r+","+r2+"]) = { (m: MEnv) => {(" + quote(x) + ": "+r+"[Value]) => ")
+      stream.println("val "+quoteO+" = implicitly[Ops["+r2+"]]")
+      stream.println("import "+quoteEv+"._")
+      if (!rs.tail.isEmpty) {
+        val old_rs = rs
+        rs = rs.tail.tail
+        val r0 = quoteR
+        rs = old_rs
+        stream.println("implicit def convert"+r0+r2+"(x: "+r0+"[Value]): "+r2+"[Value] = convertTrans["+r0+","+r+","+r2+"]("+oldEv+","+quoteEv+").convert(x)")
+      }
       emitBlock(y)
-      stream.println(quote(getBlockResult(y)) + ": "+r2+"[Value]")
+      stream.println(quoteL(getBlockResult(y)) + ": "+r2+"[Value]")
       rs = rs.tail
       stream.println("}}})")
     case IfThenElse(c,a,b) =>
-      stream.println("val " + quote(sym) + " = o.ifThenElse((" + quote(c) + "), {")
+      stream.println("val " + quote(sym) + " = "+quoteO+".ifThenElse((" + quote(c) + "), {")
       emitBlock(a)
-      stream.println(quote(getBlockResult(a)))
+      stream.println(quoteL(getBlockResult(a)))
       stream.println("}, {")
       emitBlock(b)
-      stream.println(quote(getBlockResult(b)))
-      stream.println("})")
+      stream.println(quoteL(getBlockResult(b)))
+      stream.println("})("+quoteO+".valueTag)")
     case _ => super.emitNode(sym, rhs)
   }
 }
