@@ -630,7 +630,7 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
       val fn = conts(key).fun[Rep]
       fn(r)
     case (Const(fcont@Cont(_)), Def(MakePairRep(a, Const(N))), _) =>
-      apply_cont[Rep](m, env, fcont, a)
+      apply_cont[Rep](m, env, cont, apply_cont[Rep](m, env, fcont, a))
     case (_, _, Cont(key)) => 
       val x = fresh[Value]
       val y = reifyEffects{
