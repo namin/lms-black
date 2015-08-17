@@ -571,6 +571,7 @@ trait EvalDslExp extends EvalDsl with EffectExp with FunctionsExp with IfThenEls
   }
 
   override def boundSyms(e: Any): List[Sym[Any]] = e match {
+    case BaseApplyRep(m, f, a, env, x, y) => syms(x) ::: effectSyms(y)
     case EvalfunRep(x, y) => syms(x) ::: effectSyms(y)
     case _ => super.boundSyms(e)
   }
@@ -591,9 +592,9 @@ trait EvalDslGen extends ScalaGenFunctions with ScalaGenIfThenElse with ScalaGen
   }
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case BaseApplyRep(m, f, args, env, cont_x, cont_y) =>
-      emitValDef(sym, "o.app("+m+", "+quote(f)+", "+quote(args)+", "+quote(Const(env))+", mkCont[R]{("+quote(cont_x)+": R[Value]) =>")
+      emitValDef(sym, "o.app("+m+", "+quote(f)+", "+quote(args)+", "+quote(Const(env))+", mkCont["+quoteR+"]{("+quote(cont_x)+": "+quoteR+"[Value]) =>")
       emitBlock(cont_y)
-      stream.println(quote(getBlockResult(cont_y)) + ": R[Value]")
+      stream.println(quote(getBlockResult(cont_y)) + ": "+quoteR+"[Value]")
       stream.println("})")
     case EvalfunRep(x, y) =>
       val r = quoteR
