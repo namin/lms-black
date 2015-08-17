@@ -526,6 +526,9 @@ trait EvalDsl extends Functions with IfThenElse with UncheckedOps with LiftBoole
   def make_fun_rep(m: MEnv, f: Fun[Rep]): Rep[Value]
   def get_car_rep(p: Rep[Value]): Rep[Value]
   def get_cdr_rep(p: Rep[Value]): Rep[Value]
+  def cell_new_rep(v: Rep[Value]): Rep[Value]
+  def cell_read_rep(c: Rep[Value]): Rep[Value]
+  def cell_set_rep(c: Rep[Value], v: Rep[Value]): Rep[Value]
   implicit object OpsRep extends scala.Serializable with Ops[Rep] {
     type Tag[A] = Typ[A]
     def valueTag = typ[Value]
@@ -539,9 +542,9 @@ trait EvalDsl extends Functions with IfThenElse with UncheckedOps with LiftBoole
       unchecked[Value]("o.makePair(", car, ", ", cdr, ")")
     def getCar(p: Rep[Value]) = get_car_rep(p)//unchecked[Value]("o.getCar(", p, ")")
     def getCdr(p: Rep[Value]) = get_cdr_rep(p)//unchecked[Value]("o.getCdr(", p, ")")
-    def cellNew(v: Rep[Value]) = unchecked[Value]("Code(o.cellNew(", v, "))")
-    def cellRead(c: Rep[Value]) = unchecked[Value]("o.cellRead(", c, ")")
-    def cellSet(c: Rep[Value], v: Rep[Value]) = unchecked[Value]("o.cellSet(", c, ", ", v, ")")
+    def cellNew(v: Rep[Value]) = cell_new_rep(v)
+    def cellRead(c: Rep[Value]) = cell_read_rep(c)
+    def cellSet(c: Rep[Value], v: Rep[Value]) = cell_set_rep(c, v)
     def inRep = true
   }
 
@@ -551,6 +554,24 @@ trait EvalDsl extends Functions with IfThenElse with UncheckedOps with LiftBoole
 trait EvalDslExp extends EvalDsl with EffectExp with FunctionsExp with IfThenElseExp with UncheckedOpsExp {
   implicit def valTyp: Typ[Value] = manifestTyp
   implicit def boolTyp: Typ[Boolean] = manifestTyp
+
+  var cell_es = Map[Rep[Value], Rep[Value]]()
+  case class CellReadRep(c: Rep[Value]) extends Def[Value]
+  def cell_new_rep(v: Rep[Value]) = {
+    val c = unchecked[Value]("Code(o.cellNew(", v, "))")
+    cell_es += (c -> v)
+    c
+  }
+  def cell_read_rep(c: Rep[Value]) = reflectEffect(CellReadRep(c))
+  def cell_set_rep(c: Rep[Value], v: Rep[Value]) = {
+    val uc = c match {
+      case Const(Code(uc: Rep[Value])) => uc
+      case _ => c
+    }
+    cell_es -= uc
+    unchecked[Value]("o.cellSet(", c, ", ", v, ")")
+  }
+
 
   def get_car_rep(p: Rep[Value]) = p match {
     case Const(P(a, b)) => Const(a)
@@ -603,6 +624,10 @@ trait EvalDslGen extends ScalaGenFunctions with ScalaGenIfThenElse with ScalaGen
     case _ => super.quote(x)
   }
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
+    case CellReadRep(c) => emitValDef(sym, cell_es.get(c) match {
+      case Some(v) => quote(v)
+      case None => "o.cellRead("+quote(c)+")"
+    })
     case BaseApplyRep(m, f, args, env, cont_x, cont_y) =>
       emitValDef(sym, "o.app("+m+", "+quote(f)+", "+quote(args)+", "+quote(Const(env))+", mkCont["+quoteR+"]{("+quote(cont_x)+": "+quoteR+"[Value]) =>")
       emitBlock(cont_y)
