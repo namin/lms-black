@@ -524,6 +524,8 @@ trait EvalDsl extends Functions with IfThenElse with UncheckedOps with LiftBoole
   implicit def boolTyp: Typ[Boolean]
   def base_apply_rep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value): Rep[Value]
   def make_fun_rep(m: MEnv, f: Fun[Rep]): Rep[Value]
+  def get_car_rep(p: Rep[Value]): Rep[Value]
+  def get_cdr_rep(p: Rep[Value]): Rep[Value]
   implicit object OpsRep extends scala.Serializable with Ops[Rep] {
     type Tag[A] = Typ[A]
     def valueTag = typ[Value]
@@ -535,8 +537,8 @@ trait EvalDsl extends Functions with IfThenElse with UncheckedOps with LiftBoole
     def makeFun(m: MEnv, f: Fun[Rep]) = make_fun_rep(m, f)
     def makePair(car: Rep[Value], cdr: Rep[Value]) =
       unchecked[Value]("o.makePair(", car, ", ", cdr, ")")
-    def getCar(p: Rep[Value]) = unchecked[Value]("o.getCar(", p, ")")
-    def getCdr(p: Rep[Value]) = unchecked[Value]("o.getCdr(", p, ")")
+    def getCar(p: Rep[Value]) = get_car_rep(p)//unchecked[Value]("o.getCar(", p, ")")
+    def getCdr(p: Rep[Value]) = get_cdr_rep(p)//unchecked[Value]("o.getCdr(", p, ")")
     def cellNew(v: Rep[Value]) = unchecked[Value]("Code(o.cellNew(", v, "))")
     def cellRead(c: Rep[Value]) = unchecked[Value]("o.cellRead(", c, ")")
     def cellSet(c: Rep[Value], v: Rep[Value]) = unchecked[Value]("o.cellSet(", c, ", ", v, ")")
@@ -549,6 +551,16 @@ trait EvalDsl extends Functions with IfThenElse with UncheckedOps with LiftBoole
 trait EvalDslExp extends EvalDsl with EffectExp with FunctionsExp with IfThenElseExp with UncheckedOpsExp {
   implicit def valTyp: Typ[Value] = manifestTyp
   implicit def boolTyp: Typ[Boolean] = manifestTyp
+
+  def get_car_rep(p: Rep[Value]) = p match {
+    case Const(P(a, b)) => Const(a)
+    case _ => unchecked[Value]("o.getCar(", p, ")")
+  }
+  def get_cdr_rep(p: Rep[Value]) = p match {
+    case Const(P(a, b)) => Const(b)
+    case _ => unchecked[Value]("o.getCdr(", p, ")")
+  }
+
   case class BaseApplyRep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont_x: Sym[Value], cont_y: Block[Value]) extends Def[Value]
   def base_apply_rep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value): Rep[Value] = cont match {
     case Cont(key) =>
