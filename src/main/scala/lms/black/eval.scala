@@ -577,27 +577,19 @@ trait EvalDslExp extends EvalDsl with EffectExp with FunctionsExp with IfThenEls
     case Const(B(b)) => Const(b)
     case _ => IsTrueRep(cond)
   }
-  var cell_rs = Map[Rep[Value], Boolean]()
   var cell_es = Map[Rep[Value], Rep[Value]]()
   def cell_new_rep(v: Rep[Value]) = {
     val c = reflectEffect(CellNewRep(v))
     cell_es += (c -> v)
-    cell_rs += (c -> true)
     c
   }
-  def getC(c: Rep[Value]) = {
+  def cell_read_rep(c: Rep[Value]) = reflectEffect(CellReadRep(c))
+  def cell_set_rep(c: Rep[Value], v: Rep[Value]) = {
     val uc = c match {
       case Const(Code(uc: Rep[Value])) => uc
       case _ => c
     }
-    uc
-  }
-  def cell_read_rep(c: Rep[Value]) = {
-    cell_rs += (getC(c) -> false)
-    reflectEffect(CellReadRep(c))
-  }
-  def cell_set_rep(c: Rep[Value], v: Rep[Value]) = {
-    cell_es -= getC(c)
+    cell_es -= uc
     reflectEffect(CellSetRep(c, v))
   }
 
@@ -689,7 +681,7 @@ trait EvalDslGen extends ScalaGenFunctions with ScalaGenIfThenElse with ScalaGen
     case CdrRep(p) => emitValDef(sym, quoteO+".getCdr("+quoteL(p)+")")
     case IsTrueRep(cond) => emitValDef(sym, quoteO+".isTrue("+quoteL(cond)+")")
     case CellSetRep(c, v) => emitValDef(sym, quoteO+".cellSet("+quoteL(c)+", "+quoteL(v)+")")
-    case CellNewRep(c) => if (!(cell_es.contains(c) && cell_rs(c))) emitValDef(sym, quoteO+".cellNew("+quoteL(c)+")")
+    case CellNewRep(c) => emitValDef(sym, quoteO+".cellNew("+quoteL(c)+")")
     case MakePairRep(a, b) => emitValDef(sym, quoteO+".makePair("+quoteL(a)+", "+quoteL(b)+")")
     case CellReadRep(c) => emitValDef(sym, cell_es.get(c) match {
       case Some(v) => quote(v)
