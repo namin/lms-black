@@ -690,7 +690,7 @@ trait EvalDslGen extends ScalaGenIfThenElse {
     case CellReadRep(c) => if (!omit_reads.contains(sym.asInstanceOf[Exp[Value]]))
       emitValDef(sym, cell_es.get(c) match {
       case Some(v) => quoteL(v)
-      case None => quoteO+".cellRead("+quote(c)+")"
+      case None => quoteO+".cellRead("+quoteL(c)+")"
     })
     case CellNewRep(v) => emitValDef(sym, cell_es.get(sym.asInstanceOf[Exp[Value]]) match {
       case Some(_) => quoteL(v)
