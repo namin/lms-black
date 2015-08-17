@@ -554,11 +554,11 @@ trait EvalDslExp extends EvalDsl with EffectExp with FunctionsExp with IfThenEls
 
   def get_car_rep(p: Rep[Value]) = p match {
     case Const(P(a, b)) => Const(a)
-    case _ => unchecked[Value]("o.getCar(", p, ")")
+    case _ => uncheckedPure[Value]("o.getCar(", p, ")")
   }
   def get_cdr_rep(p: Rep[Value]) = p match {
     case Const(P(a, b)) => Const(b)
-    case _ => unchecked[Value]("o.getCdr(", p, ")")
+    case _ => uncheckedPure[Value]("o.getCdr(", p, ")")
   }
 
   case class BaseApplyRep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont_x: Sym[Value], cont_y: Block[Value]) extends Def[Value]
