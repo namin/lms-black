@@ -530,7 +530,7 @@ trait EvalDsl extends Functions with IfThenElse with UncheckedOps with LiftBoole
     def lift(v: Value) = unit(v)
     def app(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value) =
       base_apply_rep(m, f, args, env, cont)
-    def isTrue(v: Rep[Value]): Rep[Boolean] = unchecked[Boolean]("o.isTrue(", v, ")")//unit(B(false))!=v
+    def isTrue(v: Rep[Value]): Rep[Boolean] = unchecked[Boolean]("o.isTrue(", v, ")")
     def ifThenElse[A:Tag](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A] = if (cond) thenp else elsep
     def makeFun(m: MEnv, f: Fun[Rep]) = make_fun_rep(m, f)
     def makePair(car: Rep[Value], cdr: Rep[Value]) =
@@ -549,9 +549,15 @@ trait EvalDsl extends Functions with IfThenElse with UncheckedOps with LiftBoole
 trait EvalDslExp extends EvalDsl with EffectExp with FunctionsExp with IfThenElseExp with UncheckedOpsExp {
   implicit def valTyp: Typ[Value] = manifestTyp
   implicit def boolTyp: Typ[Boolean] = manifestTyp
-  case class BaseApplyRep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Rep[Value => Value]) extends Def[Value]
+  case class BaseApplyRep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont_x: Sym[Value], cont_y: Block[Value]) extends Def[Value]
   def base_apply_rep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value): Rep[Value] = cont match {
-    case Cont(key) => reflectEffect(BaseApplyRep(m, f, args, env, fun(conts(key).fun[Rep])))
+    case Cont(key) =>
+      val x = fresh[Value]
+      val y = reifyEffects{
+        val fn = conts(key).fun[Rep]
+        fn(x)
+      }
+      reflectEffect(BaseApplyRep(m, f, args, env, x, y))
   }
 
   case class EvalfunRep(x: Sym[Value], y: Block[Value]) extends Def[Value]
@@ -584,8 +590,11 @@ trait EvalDslGen extends ScalaGenFunctions with ScalaGenIfThenElse with ScalaGen
     case _ => super.quote(x)
   }
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
-    case BaseApplyRep(m, f, args, env, cont) =>
-      emitValDef(sym, "o.app("+m+", "+quote(f)+", "+quote(args)+", "+quote(Const(env))+", mkCont[R]("+quote(cont)+"))")
+    case BaseApplyRep(m, f, args, env, cont_x, cont_y) =>
+      emitValDef(sym, "o.app("+m+", "+quote(f)+", "+quote(args)+", "+quote(Const(env))+", mkCont[R]{("+quote(cont_x)+": R[Value]) =>")
+      emitBlock(cont_y)
+      stream.println(quote(getBlockResult(cont_y)) + ": R[Value]")
+      stream.println("})")
     case EvalfunRep(x, y) =>
       val r = quoteR
       rs = rs.size::rs
