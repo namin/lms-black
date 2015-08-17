@@ -527,6 +527,7 @@ trait EvalDsl extends Functions with IfThenElse with UncheckedOps with LiftBoole
   implicit def boolTyp: Typ[Boolean]
   def base_apply_rep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value): Rep[Value]
   def make_fun_rep(m: MEnv, f: Fun[Rep]): Rep[Value]
+  def if_then_else_rep[A:Typ](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A]
   def get_car_rep(p: Rep[Value]): Rep[Value]
   def get_cdr_rep(p: Rep[Value]): Rep[Value]
   def make_pair_rep(car: Rep[Value], cdr: Rep[Value]): Rep[Value]
@@ -541,7 +542,7 @@ trait EvalDsl extends Functions with IfThenElse with UncheckedOps with LiftBoole
     def app(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value) =
       base_apply_rep(m, f, args, env, cont)
     def isTrue(v: Rep[Value]): Rep[Boolean] = is_true_rep(v)
-    def ifThenElse[A:Tag](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A] = if (cond) thenp else elsep
+    def ifThenElse[A:Tag](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A] = if_then_else_rep(cond, thenp, elsep)
     def makeFun(m: MEnv, f: Fun[Rep]) = make_fun_rep(m, f)
     def makePair(car: Rep[Value], cdr: Rep[Value]) = make_pair_rep(car, cdr)
     def getCar(p: Rep[Value]) = get_car_rep(p)
@@ -601,9 +602,25 @@ trait EvalDslExp extends EvalDsl with EffectExp with FunctionsExp with IfThenEls
     case _ => CdrRep(p)
   }
 
+  def if_then_else_rep[A:Typ](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]) = cond match {
+    case Const(true) => thenp
+    case Const(false) => elsep
+    case _ => if (cond) thenp else elsep
+  }
   case class BaseApplyRep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont_x: Sym[Value], cont_y: Block[Value]) extends Def[Value]
-  def base_apply_rep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value): Rep[Value] = cont match {
-    case Cont(key) =>
+
+  def hasCode(v: Value): Boolean = v match {
+    case Code(c) => true
+    case P(a, b) => hasCode(a) || hasCode(b)
+    case Clo(a, b, c) => hasCode(a) || hasCode(b) || hasCode(c)
+    case _ => false
+  }
+  def base_apply_rep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value): Rep[Value] = (f, args, cont) match {
+    case (Const(Prim(p)), Const(vs@P(_, _)), Cont(key)) if !hasCode(vs) =>
+      val r = apply_primitive(p, vs)
+      val fn = conts(key).fun[Rep]
+      fn(Const(r))
+    case (_, _, Cont(key)) => 
       val x = fresh[Value]
       val y = reifyEffects{
         val fn = conts(key).fun[Rep]
