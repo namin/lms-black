@@ -13,7 +13,9 @@ class TestInstr extends TestSuite with BeforeAndAfter {
   }
 
   def eval_instr = """(begin
-(define map
+(define map (lambda (f xs) 'TODO))
+
+(set! map
   (lambda (f xs)
     (if (null? xs)
         '()
@@ -116,6 +118,24 @@ class TestInstr extends TestSuite with BeforeAndAfter {
     ev(s"(EM $eval_instr)")
     ev(s"(EM $hook_instr)")
     ev(church)
+    assertResult{"""
+#var: 65
+#lam: 18
+#app: 42
+#total: 125
+"""}{captureOut{ev("(instr (to-int (prd c2)))")}}
+    assertResult{"""
+#var: 18
+#lam: 9
+#app: 14
+#total: 41
+"""}{captureOut{ev("(instr (to-int (prd-alt c2)))")}}
+  }
+
+  test("instrument church numerals (compiled)") {
+    ev(s"(EM $eval_instr)".replace("lambda", "clambda"))
+    ev(s"(EM $hook_instr)".replace("lambda", "clambda"))
+    ev(church.replace("lambda", "clambda"))
     assertResult{"""
 #var: 65
 #lam: 18

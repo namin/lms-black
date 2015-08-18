@@ -12,8 +12,9 @@ trait TestSuite extends FunSuite {
 
   def captureOut(thunk: => Unit) = {
     val output = new ByteArrayOutputStream()
-    scala.Console.setOut(new PrintStream(output))
-    thunk
+    scala.Console.withOut(new PrintStream(output)) {
+      thunk
+    }
     output.toString()
   }
   def checkOut(label: String, suffix: String, thunk: => Unit) = {

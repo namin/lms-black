@@ -190,13 +190,19 @@ trait EvalDslGen extends ScalaGenIfThenElse {
       emitValDef(sym, oldO+".makeFun(m, new Fun["+r+"] { def fun["+r2+"[_]:Ops](implicit "+quoteEv+": Convert["+r+","+r2+"]) = { (m: MEnv) => {(" + quote(x) + ": "+r+"[Value]) => ")
       stream.println("val "+quoteO+" = implicitly[Ops["+r2+"]]")
       stream.println("import "+quoteEv+"._")
-      if (!rs.tail.isEmpty) {
-        val old_rs = rs
-        rs = rs.tail.tail
+      val oldRs = rs
+      var prevR = r
+      var prevEv = quoteEv
+      rs = rs.tail
+      while (!rs.isEmpty) {
+        val curEv = quoteEv
+        rs = rs.tail
         val r0 = quoteR
-        rs = old_rs
-        stream.println("implicit def convert"+r0+r2+"(x: "+r0+"[Value]): "+r2+"[Value] = convertTrans["+r0+","+r+","+r2+"]("+oldEv+","+quoteEv+").convert(x)")
+        stream.println("implicit def convert"+r0+r2+"(x: "+r0+"[Value]): "+r2+"[Value] = convertTrans["+r0+","+prevR+","+r2+"]("+curEv+","+prevEv+").convert(x)")
+        prevR = r0
+        prevEv = "(new Convert["+r0+","+r2+"] { implicit def convert(x: "+r0+"[Value]) = convert"+r0+r2+"(x)})"
       }
+      rs = oldRs
       emitBlock(y)
       stream.println(quoteL(getBlockResult(y)) + ": "+r2+"[Value]")
       rs = rs.tail
