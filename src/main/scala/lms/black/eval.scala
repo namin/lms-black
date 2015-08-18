@@ -19,18 +19,24 @@ object eval {
   case class Evalfun(key: Int) extends Value
   case class Code[R[_]](c: R[Value]) extends Value
   case class Cont(key: Int) extends Value
-  case class Cell(key: Int) extends Value
+  case class Cell(key: String) extends Value {
+    override def toString = "Cell(\""+key+"\")"
+  }
   class MEnv(val key: Int) {
     override def toString = "MEnv("+key+")"
   }
 
-  var cells = Map[Int, Value]()
-  def addCell(v: Value): Int = {
-    val key = cells.size
+  def pick[A](memo: String, m: Map[String, A], i: Int = 0): String = {
+    val key = memo + (if (i==0) "" else i.toString)
+    if (m.contains(key)) pick(memo, m, i+1) else key
+  }
+  var cells = Map[String, Value]()
+  def addCell(v: Value, memo: String) = {
+    val key = pick(memo, cells)
     cells += (key -> v)
     key
   }
-  def cell_new(v: Value) = Cell(addCell(v))
+  def cell_new(v: Value, memo: String) = Cell(addCell(v, memo))
   def cell_read(c: Value): Value = c match {
     case Cell(key) => cells(key)
     case Code(cc) => cell_read(cc.asInstanceOf[Value])
@@ -120,7 +126,7 @@ object eval {
     def makePair(car: R[Value], cdr: R[Value]): R[Value]
     def getCar(p: R[Value]): R[Value]
     def getCdr(p: R[Value]): R[Value]
-    def cellNew(v: R[Value]): R[Value]
+    def cellNew(v: R[Value], memo: String): R[Value]
     def cellRead(c: R[Value]): R[Value]
     def cellSet(c: R[Value], v: R[Value]): R[Value]
     def inRep: Boolean
@@ -140,7 +146,7 @@ object eval {
     def makePair(car: Value, cdr: Value) = cons(car, cdr)
     def getCar(p: Value) = car(p)
     def getCdr(p: Value) = cdr(p)
-    def cellNew(v: Value) = cell_new(v)
+    def cellNew(v: Value, memo: String) = cell_new(v, memo)
     def cellRead(c: Value) = cell_read(c)
     def cellSet(c: Value, v: Value) = cell_set(c, v)
     def inRep = false
@@ -398,7 +404,7 @@ object eval {
       val (c, frame) = env match {
         case P(c@Cell(key), _) => (c, cells(key))
       }
-      cellSet(lift(c), makePair(makePair(name, cellNew(v)), frame))
+      cellSet(lift(c), makePair(makePair(name, cellNew(v, name.sym)), frame))
       apply_cont(m, env, cont, name)
     }))
   }
@@ -437,16 +443,16 @@ object eval {
   def env_extend[R[_]:Ops](env: Value, params: Value, args: Value) = {
     val o = implicitly[Ops[R]]
     val frame = make_pairs[R](params, args)
-    cons(if (o.inRep) frame else cell_new(frame), env)
+    cons(if (o.inRep) frame else cell_new(frame, "frame"), env)
   }
   def make_pairs[R[_]:Ops](ks: Value, vs: Value): Value = (ks, vs) match {
     case (N, N) => N
     case (N, Code(_)) => N
     case (S(s), _) => cons(cons(ks, vs), N)
-    case (P(k, ks), P(v, vs)) => cons(cons(k, cell_new(v)), make_pairs[R](ks, vs))
-    case (P(k, ks), Code(c : R[Value])) =>
+    case (P(k@S(s), ks), P(v, vs)) => cons(cons(k, cell_new(v, s)), make_pairs[R](ks, vs))
+    case (P(k@S(s), ks), Code(c : R[Value])) =>
       val o = implicitly[Ops[R]]
-      cons(cons(k, Code(o.cellNew(o.getCar(c)))), make_pairs[R](ks, Code(o.getCdr(c))))
+      cons(cons(k, Code(o.cellNew(o.getCar(c), s))), make_pairs[R](ks, Code(o.getCdr(c))))
   }
   def env_get_pair(env: Value, key: Value): Option[Value] = env match {
     case P(f, r) =>
@@ -486,22 +492,23 @@ object eval {
     case ("newline", N) => newline(); I(0)
   }
 
-  def primitive_with_side_effect = Set[Value](Prim("display"), Prim("newline"))
+  def effectful_primitives = Set[Value](Prim("display"), Prim("newline"))
 
+  def binding(s: String, v: Value): Value = P(S(s), cell_new(v, s))
   def init_frame = list_to_value(List(
-    P(S("eval-begin"), cell_new(evalfun(eval_begin_fun))),
-    P(S("eval-EM"), cell_new(evalfun(eval_EM_fun))),
-    P(S("eval-quote"), cell_new(evalfun(eval_quote_fun))),
-    P(S("eval-define"), cell_new(evalfun(eval_define_fun))),
-    P(S("eval-set!"), cell_new(evalfun(eval_set_bang_fun))),
-    P(S("eval-if"), cell_new(evalfun(eval_if_fun))),
-    P(S("eval-let"), cell_new(evalfun(eval_let_fun))),
-    P(S("eval-clambda"), cell_new(evalfun(eval_clambda_fun))),
-    P(S("eval-lambda"), cell_new(evalfun(eval_lambda_fun))),
-    P(S("eval-application"), cell_new(evalfun(eval_application_fun))),
-    P(S("eval-var"), cell_new(evalfun(eval_var_fun))),
-    P(S("eval-list"), cell_new(evalfun(eval_list_fun))),
-    P(S("base-eval"), cell_new(evalfun(base_eval_fun))),
+    binding("eval-begin", evalfun(eval_begin_fun)),
+    binding("eval-EM", evalfun(eval_EM_fun)),
+    binding("eval-quote", evalfun(eval_quote_fun)),
+    binding("eval-define", evalfun(eval_define_fun)),
+    binding("eval-set!", evalfun(eval_set_bang_fun)),
+    binding("eval-if", evalfun(eval_if_fun)),
+    binding("eval-let", evalfun(eval_let_fun)),
+    binding("eval-clambda", evalfun(eval_clambda_fun)),
+    binding("eval-lambda", evalfun(eval_lambda_fun)),
+    binding("eval-application", evalfun(eval_application_fun)),
+    binding("eval-var", evalfun(eval_var_fun)),
+    binding("eval-list", evalfun(eval_list_fun)),
+    binding("base-eval", evalfun(base_eval_fun)),
     P(S("null?"), Prim("null?")),
     P(S("number?"), Prim("number?")),
     P(S("<"), Prim("<")),
@@ -514,7 +521,7 @@ object eval {
     P(S("display"), Prim("display")),
     P(S("newline"), Prim("newline"))
   ))
-  def init_env = cons(Cell(addCell(init_frame)), N)
+  def init_env = cons(cell_new(init_frame, "global"), N)
 
   def list_to_value(xs: List[Value]): Value = xs match {
     case Nil => N

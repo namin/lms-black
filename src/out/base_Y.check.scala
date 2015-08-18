@@ -18,7 +18,7 @@ class staged$0 extends Fun[NoRep] with (Value => Value) {
           val x8 = x5
           val x9 = x5
           val x10 = o1.makePair(x9, o1.lift(N))
-          val x12 = o1.app(MEnv(11), x8, x10, P(P(P(S("F"), Code(x6)), N), P(P(P(S("fun"), Code(x2)), N), P(Cell(13), N))), mkCont[R1]{(x11: R1[Value]) =>
+          val x12 = o1.app(MEnv(11), x8, x10, P(P(P(S("F"), Code(x6)), N), P(P(P(S("fun"), Code(x2)), N), P(Cell("global"), N))), mkCont[R1]{(x11: R1[Value]) =>
             x11: R1[Value]
           })
           x12: R1[Value]
@@ -39,24 +39,24 @@ class staged$0 extends Fun[NoRep] with (Value => Value) {
                 val x24 = x16
                 val x25 = x16
                 val x26 = o2.makePair(x25, o2.lift(N))
-                val x28 = o2.app(MEnv(33), x24, x26, P(P(P(S("x"), Code(x22)), N), P(P(P(S("F"), Code(x17)), N), P(P(P(S("fun"), Code(x2)), N), P(Cell(13), N)))), mkCont[R2]{(x27: R2[Value]) =>
+                val x28 = o2.app(MEnv(33), x24, x26, P(P(P(S("x"), Code(x22)), N), P(P(P(S("F"), Code(x17)), N), P(P(P(S("fun"), Code(x2)), N), P(Cell("global"), N)))), mkCont[R2]{(x27: R2[Value]) =>
                   x27: R2[Value]
                 })
                 val x29 = x21
                 val x30 = o2.makePair(x29, o2.lift(N))
-                val x32 = o2.app(MEnv(31), x28, x30, P(P(P(S("x"), Code(x22)), N), P(P(P(S("F"), Code(x17)), N), P(P(P(S("fun"), Code(x2)), N), P(Cell(13), N)))), mkCont[R2]{(x31: R2[Value]) =>
+                val x32 = o2.app(MEnv(31), x28, x30, P(P(P(S("x"), Code(x22)), N), P(P(P(S("F"), Code(x17)), N), P(P(P(S("fun"), Code(x2)), N), P(Cell("global"), N)))), mkCont[R2]{(x31: R2[Value]) =>
                   x31: R2[Value]
                 })
                 x32: R2[Value]
           }}})
           val x35 = o1.makePair(x34, o1.lift(N))
-          val x37 = o1.app(MEnv(23), x19, x35, P(P(P(S("F"), Code(x17)), N), P(P(P(S("fun"), Code(x2)), N), P(Cell(13), N))), mkCont[R1]{(x36: R1[Value]) =>
+          val x37 = o1.app(MEnv(23), x19, x35, P(P(P(S("F"), Code(x17)), N), P(P(P(S("fun"), Code(x2)), N), P(Cell("global"), N))), mkCont[R1]{(x36: R1[Value]) =>
             x36: R1[Value]
           })
           x37: R1[Value]
     }}})
     val x40 = o.makePair(x39, o.lift(N))
-    val x42 = o.app(MEnv(6), x14, x40, P(P(P(S("fun"), Code(x2)), N), P(Cell(13), N)), mkCont[R]{(x41: R[Value]) =>
+    val x42 = o.app(MEnv(6), x14, x40, P(P(P(S("fun"), Code(x2)), N), P(Cell("global"), N)), mkCont[R]{(x41: R[Value]) =>
       x41: R[Value]
     })
     x42
