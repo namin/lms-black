@@ -1,4 +1,5 @@
 * Add a black-like REPL
 * Decide on correctness of MEnv argument
 OK * Investigate appearances of Cont(INT_KEY) in last REPL example
+* Provide guarantees in type that continuations are applied at right stage.
 * Reconsider overall architecture
