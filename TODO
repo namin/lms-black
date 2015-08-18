@@ -3,6 +3,10 @@
 OK * Investigate appearances of Cont(INT_KEY) in last REPL example
 * Provide guarantees in type that continuations are applied at right stage.
 * Reconsider overall architecture
+* Full metacontinuations instead of just meta-environments?
+  Return type might need to change from R[Value] to R[MCont => Unit],
+  perhaps can get away with R[MCont => Value], since Unit is problematic
+  for composing generation-time with run-time continuations.
 NO * Add base-apply in the environment
 OK * Clean up eval tests
 * better scheme than Code if inRep and asInstanceOf otherwise
