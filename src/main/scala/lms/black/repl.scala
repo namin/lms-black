@@ -9,7 +9,7 @@ object repl {
   var global_menv = init_menv[NoRep]
   def ev(s: String) = {
     val Success(e, _) = parseAll(exp, s)
-    base_eval[NoRep](global_menv, e, global_env, id_cont)
+    meta_apply[NoRep](global_menv, S("base-eval"), e, global_env, id_cont)
   }
   def clean() = {
     reset()
