@@ -169,4 +169,56 @@ class TestInstr extends TestSuite with BeforeAndAfter {
 #total: 5
 """}{captureOut{ev("(instr (to-int (prd-alt c2)))")}}
   }
+
+  test("instrument all church numerals") {
+    ev(s"(EM $eval_instr)")
+    ev(s"(EM $hook_instr)")
+    assertResult{"""
+#var: 68
+#lam: 37
+#app: 44
+#total: 149
+"""}{captureOut{ev(s"(instr (let () $church (to-int (prd c2))))")}}
+    assertResult{"""
+#var: 21
+#lam: 28
+#app: 16
+#total: 65
+"""}{captureOut{ev(s"(instr (let () $church (to-int (prd-alt c2))))")}}
+  }
+
+  test("instrument all church numerals (meta-compiled)") {
+    ev(s"(EM $eval_instr)".replace("(lambda", "(clambda"))
+    ev(s"(EM $hook_instr)".replace("lambda", "clambda"))
+    assertResult{"""
+#var: 68
+#lam: 37
+#app: 44
+#total: 149
+"""}{captureOut{ev(s"(instr (let () $church (to-int (prd c2))))")}}
+    assertResult{"""
+#var: 21
+#lam: 28
+#app: 16
+#total: 65
+"""}{captureOut{ev(s"(instr (let () $church (to-int (prd-alt c2))))")}}
+  }
+
+  test("instrument all church numerals (all compiled)") {
+    ev(s"(EM $eval_instr)".replace("lambda", "clambda"))
+    ev(s"(EM $hook_instr)".replace("lambda", "clambda"))
+    assert(captureOut{ev(s"(instr (let () ${church.replace("lambda", "clambda")} (to-int (prd c2))))")}.endsWith("""
+#var: 68
+#lam: 37
+#app: 44
+#total: 149
+"""))
+    assert(captureOut{ev(s"(instr (let () ${church.replace("lambda", "clambda")} (to-int (prd-alt c2))))")}.endsWith("""
+#var: 21
+#lam: 28
+#app: 16
+#total: 65
+"""))
+  }
+
 }

@@ -157,7 +157,7 @@ trait EvalDslGen extends ScalaGenIfThenElse {
   }
   override def quote(x: Exp[Any]) : String = x match {
     case Const(P(a, b)) => "P("+quoteInP(a)+", "+quoteInP(b)+")"
-    case Const(Code(c)) => quote(c.asInstanceOf[Rep[Any]])
+    case Const(Code(c)) => if (c.isInstanceOf[Rep[Any]]) quote(c.asInstanceOf[Rep[Any]]) else quote(Const(c.asInstanceOf[Value]))
     case Const(Clo(param, body, env)) =>  "Clo("+quote(Const(param))+", "+quote(Const(body))+", "+quote(Const(env))+")"
     case _ => super.quote(x)
   }
