@@ -477,6 +477,8 @@ object eval {
     case ("newline", N) => newline(); I(0)
   }
 
+  def primitive_with_side_effect = Set[Value](Prim("display"), Prim("newline"))
+
   def init_frame = list_to_value(List(
     P(S("eval-begin"), cell_new(evalfun(eval_begin_fun))),
     P(S("eval-EM"), cell_new(evalfun(eval_EM_fun))),

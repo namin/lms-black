@@ -132,10 +132,10 @@ class TestInstr extends TestSuite with BeforeAndAfter {
 """}{captureOut{ev("(instr (to-int (prd-alt c2)))")}}
   }
 
-  test("instrument church numerals (compiled)") {
-    ev(s"(EM $eval_instr)".replace("lambda", "clambda"))
+  test("instrument church numerals (meta-compiled)") {
+    ev(s"(EM $eval_instr)".replace("(lambda", "(clambda")) // to avoid eval-lambda
     ev(s"(EM $hook_instr)".replace("lambda", "clambda"))
-    ev(church.replace("lambda", "clambda"))
+    ev(church)
     assertResult{"""
 #var: 65
 #lam: 18

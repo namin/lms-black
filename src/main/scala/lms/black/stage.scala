@@ -98,7 +98,7 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
   }
   var omit_reads = Set[Rep[Value]]()
   def base_apply_rep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value): Rep[Value] = (f, args, cont) match {
-    case (Const(Prim(p)), Const(vs@P(_, _)), Cont(key)) if !hasCode(vs) =>
+    case (Const(fprim@Prim(p)), Const(vs@P(_, _)), Cont(key)) if !primitive_with_side_effect.contains(fprim) && !hasCode(vs) =>
       val r = apply_primitive(p, vs)
       val fn = conts(key).fun[Rep]
       fn(Const(r))
