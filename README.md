@@ -12,5 +12,5 @@ by Kenichi Asai in his GPCE 2014 paper, _Compiling a Reflective
 Language using MetaOCaml_.
 
 How? First, all functions (at any level) are polymorphic as to whether
-they generate code or run. Second, the code generated is also
-polymorphic in this way!
+they generate code or run. Second, code generated is also polymorphic
+in this way!
