@@ -190,7 +190,7 @@ object eval {
     val o = implicitly[Ops[R]]; import o._
     exps match {
       case N => apply_cont[R](m, env, cont, lift(N))
-      case P(e, es) => base_eval[R](m, e, env, mkCont[R]({ v =>
+      case P(e, es) => meta_apply[R](m, S("base-eval"), e, env, mkCont[R]({ v =>
         base_evlist[R](m, es, env, mkCont[R]({ vs =>
           apply_cont[R](m, env, cont, makePair(v, vs))
         }))
@@ -461,7 +461,7 @@ object eval {
     P(S("eval-lambda"), cell_new(evalfun(eval_lambda_fun))),
     P(S("eval-application"), cell_new(evalfun(eval_application_fun))),
     P(S("eval-var"), cell_new(evalfun(eval_var_fun))),
-    P(S("base-eval"), evalfun(base_eval_fun)),
+    P(S("base-eval"), cell_new(evalfun(base_eval_fun))),
     P(S("number?"), Prim("number?")),
     P(S("<"), Prim("<")),
     P(S("+"), Prim("+")),
