@@ -151,7 +151,7 @@ class TestInstr extends TestSuite with BeforeAndAfter {
   }
 
   // is this a bug? because of the way instr works,
-  // we cannot precompile
+  // we cannot precompile, since instr adds the hooks on the fly
   test("instrument church numerals (all compiled)") {
     ev(s"(EM $eval_instr)".replace("(lambda", "(clambda"))
     ev(s"(EM $hook_instr)".replace("lambda", "clambda"))
