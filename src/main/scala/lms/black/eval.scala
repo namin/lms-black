@@ -244,7 +244,7 @@ object eval {
   def eval_application[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     val P(fun, args) = exp
-    base_eval[R](m, fun, env, mkCont[R]({ v =>
+    meta_apply[R](m, S("base-eval"), fun, env, mkCont[R]({ v =>
       base_evlist[R](m, args, env, mkCont[R]({ vs =>
         base_apply[R](m, v, vs, env, cont)
       }))
