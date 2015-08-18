@@ -109,4 +109,18 @@ class TestTaba extends TestSuite with BeforeAndAfter {
       show(ev("(taba (cnv walk) (cnv '(1 2 3) '(a b c)))"))
     }
   }
+
+  test("TABA cnv (meta-compiled)") {
+    ev(s"(EM $add_app_hook)".replace("lambda", "clambda"))
+    ev(s"(EM $taba)".replace("lambda", "clambda"))
+    ev(cnv)
+    assertResult{"""(((1 . c) (2 . b) (3 . a))
+((cnv ((1 2 3) (a b c)) ((1 . c) (2 . b) (3 . a)))
+(walk ((1 2 3) (a b c)) (((1 . c) (2 . b) (3 . a))))
+(walk ((2 3) (a b c)) (((2 . b) (3 . a)) c))
+(walk ((3) (a b c)) (((3 . a)) b c))
+(walk (() (a b c)) (() a b c))))""".replace("\n", " ")}{
+      show(ev("(taba (cnv walk) (cnv '(1 2 3) '(a b c)))"))
+    }
+  }
 }
