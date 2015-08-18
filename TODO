@@ -6,4 +6,4 @@ OK * Investigate appearances of Cont(INT_KEY) in last REPL example
 NO * Add base-apply in the environment
 OK * Clean up eval tests
 * better scheme than Code if inRep and asInstanceOf otherwise
-* refactor conversion evidence generation
+OK * refactor conversion evidence generation
