@@ -327,10 +327,10 @@ object eval {
     val (cond, thenp, elsep) = exp match {
       case P(_, P(cond, P(thenp, P(elsep, N)))) => (cond, thenp, elsep)
     }
-    base_eval[R](m, cond, env, mkCont[R]({ vc =>
+    meta_apply[R](m, S("base-eval"), cond, env, mkCont[R]({ vc =>
       ifThenElse(isTrue(vc),
-        base_eval[R](m, thenp, env, cont),
-        base_eval[R](m, elsep, env, cont))
+        meta_apply[R](m, S("base-eval"), thenp, env, cont),
+        meta_apply[R](m, S("base-eval"), elsep, env, cont))
     }))
   }
 
@@ -345,7 +345,7 @@ object eval {
     val (name, body) = exp match {
       case P(_, P(name@S(_), P(body, N))) => (name, body)
     }
-    base_eval[R](m, body, env, mkCont[R]({ v =>
+    meta_apply[R](m, S("base-eval"), body, env, mkCont[R]({ v =>
       val p = env_get(env, name)
       cellSet(lift(p), v)
       apply_cont(m, env, cont, name)
@@ -398,7 +398,7 @@ object eval {
       case P(_, P(e, N)) => e
     }
     val MEnv(meta_env, meta_menv) = m
-    base_eval[R](meta_menv, e, meta_env, mkCont[R]{v =>
+    meta_apply[R](meta_menv, S("base-eval"), e, meta_env, mkCont[R]{v =>
       apply_cont(m, env, cont, v)
     })
   }
