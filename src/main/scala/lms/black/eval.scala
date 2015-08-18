@@ -7,6 +7,9 @@ object eval {
   case class S(sym: String) extends Value {
     override def toString = "S(\""+sym+"\")"
   }
+  case class Str(s: String) extends Value {
+    override def toString = "Str(\""+s+"\")"
+  }
   case object N extends Value
   case class P(car: Value, cdr: Value) extends Value
   case class Prim(p: String) extends Value {
@@ -207,7 +210,7 @@ object eval {
   def base_eval[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     exp match {
-      case I(_) | B(_) => apply_cont[R](m, env, cont, lift(exp))
+      case I(_) | B(_) | Str(_) => apply_cont[R](m, env, cont, lift(exp))
       case S(sym) => meta_apply[R](m, S("eval-var"), exp, env, cont)
       case P(S("lambda"), _) => meta_apply[R](m, S("eval-lambda"), exp, env, cont)
       case P(S("clambda"), _) => meta_apply[R](m, S("eval-clambda"), exp, env, cont)
@@ -515,6 +518,7 @@ object eval {
     case B(b) => (false, if (b) "#t" else "#f")
     case I(n) => (false, n.toString)
     case S(s) => (false, s)
+    case Str(s) => (false, s)
     case N => (true, "")
     case P(a, N) => (true, addParen(pp(a)))
     case P(a, d) =>
