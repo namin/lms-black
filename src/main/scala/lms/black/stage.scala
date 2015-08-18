@@ -20,8 +20,7 @@ trait EvalDsl extends IfThenElse with LiftBoolean {
     type Tag[A] = Typ[A]
     def valueTag = typ[Value]
     def lift(v: Value) = unit(v)
-    def app(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value) =
-      base_apply_rep(m, f, args, env, cont)
+    def app(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value) = base_apply_rep(m, f, args, env, cont)
     def isTrue(v: Rep[Value]): Rep[Boolean] = is_true_rep(v)
     def ifThenElse[A:Tag](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A] = if_then_else_rep(cond, thenp, elsep)
     def makeFun(m: MEnv, f: Fun[Rep]) = make_fun_rep(m, f)
@@ -58,6 +57,7 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
     case Const(B(b)) => Const(b)
     case _ => IsTrueRep(cond)
   }
+
   var cell_es = Map[Rep[Value], Rep[Value]]()
   def cell_new_rep(v: Rep[Value]) = {
     val c = reflectEffect(CellNewRep(v))
@@ -88,7 +88,6 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
     case Const(false) => elsep
     case _ => if (cond) thenp else elsep
   }
-  case class BaseApplyRep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont_x: Sym[Value], cont_y: Block[Value]) extends Def[Value]
 
   def hasCode(v: Value): Boolean = v match {
     case Code(c) => true
@@ -96,7 +95,9 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
     case Clo(a, b, c) => hasCode(a) || hasCode(b) || hasCode(c)
     case _ => false
   }
+
   var omit_reads = Set[Rep[Value]]()
+  case class BaseApplyRep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont_x: Sym[Value], cont_y: Block[Value]) extends Def[Value]
   def base_apply_rep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value): Rep[Value] = (f, args, cont) match {
     case (Const(fprim@Prim(p)), Const(vs@P(_, _)), Cont(key)) if !primitive_with_side_effect.contains(fprim) && !hasCode(vs) =>
       val r = apply_primitive(p, vs)
@@ -205,7 +206,7 @@ trait EvalDslGen extends ScalaGenIfThenElse {
       rs = rs.tail
       stream.println("}}})")
     case IfThenElse(c,a,b) =>
-      stream.println("val " + quote(sym) + " = "+quoteO+".ifThenElse((" + quote(c) + "), {")
+      stream.println("val " + quote(sym) + " = "+quoteO+".ifThenElse((" + quoteL(c) + "), {")
       emitBlock(a)
       stream.println(quoteL(getBlockResult(a)))
       stream.println("}, {")
@@ -231,6 +232,7 @@ trait EvalDslImpl extends EvalDslExp { q =>
       stream.println("import scala.lms.black.eval._")
     }
 
+    // this is cargo culted from the `ScalaCodegen`
     override def emitSource[A:Typ](args: List[Sym[_]], body: Block[A], className: String, out: java.io.PrintWriter) = {
       val sA = remap(typ[A])
 
@@ -244,8 +246,11 @@ trait EvalDslImpl extends EvalDslExp { q =>
 
         stream.println("class "+className+(if (staticData.isEmpty) "" else "("+staticData.map(p=>"p"+quote(p._1)+":"+p._1.tp).mkString(",")+")")+" extends Fun[NoRep] with (Value => Value) {")
 
+        // dummy function for CompileScala below to be happy casting
         stream.println("def apply(v: Value): Value = v")
+
         stream.println("def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { v => fun[R](m, v)(implicitly[Ops[R]], ev)  } }")
+
         stream.println("def fun[R[_]:Ops](m: MEnv, "+args.map(a => quote(a) + ":" + "Value"/*remap(a.tp)*/).mkString(", ")+")(implicit ev: Convert[NoRep,R]): "+sA+" = {")
         stream.println("val o = implicitly[Ops[R]]; import o._")
 
@@ -259,7 +264,7 @@ trait EvalDslImpl extends EvalDslExp { q =>
                        "  End of Generated Code                  \n"+
                        "*******************************************/")
       }
-    staticData
+      staticData
     }
   }
 }
