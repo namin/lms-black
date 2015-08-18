@@ -229,9 +229,9 @@ object eval {
   }
   def eval_begin[R[_]:Ops](m: MEnv, body: Value, env: Value, cont: Value): R[Value] =
     body match {
-      case P(exp, N) => base_eval[R](m, exp, env, cont)
-      case P(exp, rest) => base_eval[R](m, exp, env, mkCont[R]{ _ =>
-        eval_begin[R](m, rest, env, cont)
+      case P(exp, N) => meta_apply[R](m, S("base-eval"), exp, env, cont)
+      case P(exp, rest) => meta_apply[R](m, S("base-eval"), exp, env, mkCont[R]{ _ =>
+        meta_apply[R](m, S("eval-begin"), rest, env, cont)
       })
     }
 
