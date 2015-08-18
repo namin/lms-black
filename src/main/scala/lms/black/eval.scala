@@ -504,14 +504,6 @@ object eval {
   def display(v: Value) = println(addParen(pp(v)))
 
   def init_menv[R[_]:Ops]: MEnv = MEnv(init_env, init_menv[R])
-
-  def top_eval[R[_]:Ops](exp: Value): R[Value] = {
-    try {
-      base_eval[R](init_menv[R], exp, init_env, mkCont[R](x => x))
-    } finally {
-      reset()
-    }
-  }
 }
 
 import eval._
