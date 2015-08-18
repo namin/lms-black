@@ -428,8 +428,11 @@ object eval {
     })
   }
 
-  def env_extend[R[_]:Ops](env: Value, params: Value, args: Value) =
-    cons(make_pairs[R](params, args), env)
+  def env_extend[R[_]:Ops](env: Value, params: Value, args: Value) = {
+    val o = implicitly[Ops[R]]
+    val frame = make_pairs[R](params, args)
+    cons(if (o.inRep) frame else cell_new(frame), env)
+  }
   def make_pairs[R[_]:Ops](ks: Value, vs: Value): Value = (ks, vs) match {
     case (N, N) => N
     case (N, Code(_)) => N
