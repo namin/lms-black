@@ -5,3 +5,4 @@ OK * Investigate appearances of Cont(INT_KEY) in last REPL example
 * Reconsider overall architecture
 NO * Add base-apply in the environment
 OK * Clean up eval tests
+* better scheme than Code if inRep and asInstanceOf otherwise
