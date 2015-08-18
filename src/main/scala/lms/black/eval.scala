@@ -363,7 +363,7 @@ object eval {
     val (name, body) = exp match {
       case P(_, P(name@S(_), P(body, N))) => (name, body)
     }
-    base_eval[R](m, body, env, mkCont[R]({ v =>
+    meta_apply[R](m, S("base-eval"), body, env, mkCont[R]({ v =>
       val (c, frame) = env match {
         case P(c@Cell(key), _) => (c, cells(key))
       }
