@@ -446,9 +446,6 @@ object eval {
     case ("car", P(v, N)) => car(v)
     case ("cdr", P(v, N)) => cdr(v)
     case ("cons", P(a, P(d, N))) => cons(a, d)
-    case ("cell_new", P(v, N)) => cell_new(v)
-    case ("cell_read", P(c, N)) => cell_read(c)
-    case ("cell_set!", P(c, P(v, N))) => cell_set(c, v)
     case ("eq?", P(a, P(b, N))) => B(a==b)
     case ("display", P(a, N)) => display(a); I(0)
   }
@@ -472,9 +469,6 @@ object eval {
     P(S("car"), Prim("car")),
     P(S("cdr"), Prim("cdr")),
     P(S("cons"), Prim("cons")),
-    P(S("cell_new"), Prim("cell_new")),
-    P(S("cell_read"), Prim("cell_read")),
-    P(S("cell_set!"), Prim("cell_set!")),
     P(S("eq?"), Prim("eq?")),
     P(S("display"), Prim("display"))
   ))
