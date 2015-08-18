@@ -174,6 +174,18 @@ object eval {
     o.app(m, fun, args, env, cont)
   }
 
+  def meta_apply[R[_]:Ops](m: MEnv, s: Value, exp: Value, env: Value, cont: Value): R[Value] = {
+    val MEnv(meta_env, meta_menv) = m
+    val o = implicitly[Ops[R]]; import o._
+    val fun = env_get(meta_env, s) match {
+      case v@Cell(_) => cell_read(v)
+    }
+    val cont_id = mkCont[R]{v => v}
+    val (arg_cont, meta_cont) = if (inRep) (cont_id, cont) else (cont, cont_id)
+    val args = P(exp, P(env, P(arg_cont, N)))
+    static_apply[R](meta_menv, fun, args, meta_env, meta_cont)
+  }
+
   def base_evlist[R[_]:Ops](m: MEnv, exps: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     exps match {
@@ -389,18 +401,6 @@ object eval {
     base_eval[R](meta_menv, e, meta_env, mkCont[R]{v =>
       apply_cont(m, env, cont, v)
     })
-  }
-
-  def meta_apply[R[_]:Ops](m: MEnv, s: Value, exp: Value, env: Value, cont: Value): R[Value] = {
-    val MEnv(meta_env, meta_menv) = m
-    val o = implicitly[Ops[R]]; import o._
-    val fun = env_get(meta_env, s) match {
-      case v@Cell(_) => cell_read(v)
-    }
-    val cont_id = mkCont[R]{v => v}
-    val (arg_cont, meta_cont) = if (inRep) (cont_id, cont) else (cont, cont_id)
-    val args = P(exp, P(env, P(arg_cont, N)))
-    static_apply[R](meta_menv, fun, args, meta_env, meta_cont)
   }
 
   def env_extend[R[_]:Ops](env: Value, params: Value, args: Value) =
