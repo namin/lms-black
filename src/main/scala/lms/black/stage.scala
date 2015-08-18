@@ -141,10 +141,14 @@ trait EvalDslGen extends ScalaGenIfThenElse {
   val IR: EvalDslExp
   import IR._
 
-  var rs = List[Int]()
-  def quoteR = "R"+(if (rs.isEmpty) "" else rs.head.toString)
-  def quoteO = if (rs.isEmpty) "o" else "o"+(rs.head.toString)
-  def quoteEv = if (rs.isEmpty) "ev" else "ev"+(rs.head.toString)
+  var rs = List[String]("")
+  def quote_R(a: String): String = "R"+a
+  def quote_R(rs: List[String]): String = quote_R(rs.head)
+  def quoteR = quote_R(rs)
+  def quoteO = "o"+(rs.head.toString)
+  def quote_Ev(a: String, b: String): String = "ev"+b+"_"+a
+  def quote_Ev(rs: List[String]): String = if (rs.tail.isEmpty) "ev"+(rs.head.toString) else quote_Ev(rs.head, rs.tail.head)
+  def quoteEv = quote_Ev(rs)
 
   def quoteL(x: Exp[Any]) : String = x match {
     case Const(Code(e: Exp[Any])) => quote(e)
@@ -182,27 +186,20 @@ trait EvalDslGen extends ScalaGenIfThenElse {
       stream.println(quoteL(getBlockResult(cont_y)) + ": "+quoteR+"[Value]")
       stream.println("})")
     case EvalfunRep(x, y) =>
-      val r = quoteR
+      val r1 = quoteR
       val oldO = quoteO
-      val oldEv = quoteEv
-      rs = rs.size::rs
+      val a = rs.size.toString
+      rs = a::rs
       val r2 = quoteR
-      emitValDef(sym, oldO+".makeFun(m, new Fun["+r+"] { def fun["+r2+"[_]:Ops](implicit "+quoteEv+": Convert["+r+","+r2+"]) = { (m: MEnv) => {(" + quote(x) + ": "+r+"[Value]) => ")
+      emitValDef(sym, oldO+".makeFun(m, new Fun["+r1+"] { def fun["+r2+"[_]:Ops](implicit "+quoteEv+": Convert["+r1+","+r2+"]) = { (m: MEnv) => {(" + quote(x) + ": "+r1+"[Value]) => ")
       stream.println("val "+quoteO+" = implicitly[Ops["+r2+"]]")
-      stream.println("import "+quoteEv+"._")
-      val oldRs = rs
-      var prevR = r
-      var prevEv = quoteEv
-      rs = rs.tail
-      while (!rs.isEmpty) {
-        val curEv = quoteEv
-        rs = rs.tail
-        val r0 = quoteR
-        stream.println("implicit def convert"+r0+r2+"(x: "+r0+"[Value]): "+r2+"[Value] = convertTrans["+r0+","+prevR+","+r2+"]("+curEv+","+prevEv+").convert(x)")
-        prevR = r0
-        prevEv = "(new Convert["+r0+","+r2+"] { implicit def convert(x: "+r0+"[Value]) = convert"+r0+r2+"(x)})"
+      stream.println("implicit def convert_"+quoteEv+"(x: "+r1+"[Value]): "+r2+"[Value] = "+quoteEv+".convert(x)")
+      if (!rs.tail.isEmpty) {
+        for ((b, c) <- rs.tail.zip(rs.tail.tail)) {
+          stream.println("val "+quote_Ev(a, c)+": Convert["+quote_R(c)+","+quote_R(a)+"] = convertTrans["+quote_R(c)+","+quote_R(b)+","+quote_R(a)+"]("+quote_Ev(b, c)+", "+quote_Ev(a, b)+")")
+          stream.println("implicit def convert_"+quote_Ev(a, c)+"(x: "+quote_R(c)+"[Value]): "+quote_R(a)+"[Value] = "+quote_Ev(a, c)+".convert(x)")
+        }
       }
-      rs = oldRs
       emitBlock(y)
       stream.println(quoteL(getBlockResult(y)) + ": "+r2+"[Value]")
       rs = rs.tail
