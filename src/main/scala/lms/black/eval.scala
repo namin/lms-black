@@ -211,6 +211,7 @@ object eval {
       case S(sym) => meta_apply[R](m, S("eval-var"), exp, env, cont)
       case P(S("lambda"), _) => meta_apply[R](m, S("eval-lambda"), exp, env, cont)
       case P(S("clambda"), _) => meta_apply[R](m, S("eval-clambda"), exp, env, cont)
+      case P(S("let"), _) => meta_apply[R](m, S("eval-let"), exp, env, cont)
       case P(S("if"), _) => meta_apply[R](m, S("eval-if"), exp, env, cont)
       case P(S("begin"), body) => meta_apply[R](m, S("eval-begin"), body, env, cont)
       case P(S("set!"), _) => meta_apply[R](m, S("eval-set!"), exp, env, cont)
@@ -314,6 +315,27 @@ object eval {
       })
       apply_cont(m, env, cont, f)
     }
+  }
+
+  def eval_let_fun: Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
+      val P(exp, P(env, P(cont, N))) = vc
+      eval_let[R](m, exp, env, cont)
+    }}
+  }
+  def eval_let[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
+    val o = implicitly[Ops[R]]; import o._
+    val (pairs, body) = exp match {
+      case P(_, P(pairs, body)) => (pairs, body)
+    }
+    val ps = value_to_list(pairs)
+    val params = list_to_value(ps.map(car))
+    val args = list_to_value(ps.map{a => car(cdr(a))})
+    base_evlist[R](m, args, env, mkCont[R]{vs =>
+      meta_apply[R](m, S("eval-begin"), body,
+        env_extend[R](env, params, if (inRep) Code(vs) else vs.asInstanceOf[Value]),
+        cont)
+    })
   }
 
   def eval_if_fun: Fun[NoRep] = new Fun[NoRep] {
@@ -457,6 +479,7 @@ object eval {
     P(S("eval-define"), cell_new(evalfun(eval_define_fun))),
     P(S("eval-set!"), cell_new(evalfun(eval_set_bang_fun))),
     P(S("eval-if"), cell_new(evalfun(eval_if_fun))),
+    P(S("eval-let"), cell_new(evalfun(eval_let_fun))),
     P(S("eval-clambda"), cell_new(evalfun(eval_clambda_fun))),
     P(S("eval-lambda"), cell_new(evalfun(eval_lambda_fun))),
     P(S("eval-application"), cell_new(evalfun(eval_application_fun))),
@@ -477,6 +500,11 @@ object eval {
   def list_to_value(xs: List[Value]): Value = xs match {
     case Nil => N
     case (x::xs) => P(x, list_to_value(xs))
+  }
+
+  def value_to_list(vs: Value): List[Value] = vs match {
+    case N => Nil
+    case P(v, vs) => v::value_to_list(vs)
   }
 
   def addParen(p: (Boolean, String)) = {
