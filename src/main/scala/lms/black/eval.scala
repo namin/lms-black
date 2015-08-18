@@ -93,32 +93,6 @@ object eval {
     case P(a, d) => d
   }
 
-  def apply_cont[R[_]:Ops](m: MEnv, env: Value, cont: Value, v: R[Value]): R[Value] = cont match {
-    case Cont(key) =>
-      val f = conts(key).fun[R]
-      f(v)
-    case _ =>
-      val o = implicitly[Ops[R]]; import o._
-      static_apply[R](MEnv(env, m), cont,
-        P((if (inRep) Code(v) else v.asInstanceOf[Value]), N),
-        env, mkCont[R]{v => v}, shift=false)
-  }
-
-  def static_apply[R[_]:Ops](m: MEnv, fun: Value, args: Value, env: Value, cont: Value, shift: Boolean = true) = {
-    val o = implicitly[Ops[R]]; import o._
-    fun match {
-      case Clo(params, body, cenv) =>
-        meta_apply[R](m, S("eval-begin"), body, env_extend[R](cenv, params, args), cont)
-      case Evalfun(key) =>
-        val f = funs(key).fun[R]
-        apply_cont[R](m, env, cont, f(if (shift) MEnv(env, m) else m)(args))
-      case Prim(p) =>
-        apply_cont[R](m, env, cont, apply_primitive(p, args))
-      case Cont(_) =>
-        apply_cont[R](m, env, cont, apply_cont[R](m, env, fun, car(args)))
-    }
-  }
-
   trait Convert[W[_], R[_]] {
     implicit def convert(v: W[Value]): R[Value]
   }
@@ -167,6 +141,32 @@ object eval {
     def cellRead(c: Value) = cell_read(c)
     def cellSet(c: Value, v: Value) = cell_set(c, v)
     def inRep = false
+  }
+
+  def apply_cont[R[_]:Ops](m: MEnv, env: Value, cont: Value, v: R[Value]): R[Value] = cont match {
+    case Cont(key) =>
+      val f = conts(key).fun[R]
+      f(v)
+    case _ =>
+      val o = implicitly[Ops[R]]; import o._
+      static_apply[R](MEnv(env, m), cont,
+        P((if (inRep) Code(v) else v.asInstanceOf[Value]), N),
+        env, mkCont[R]{v => v}, shift=false)
+  }
+
+  def static_apply[R[_]:Ops](m: MEnv, fun: Value, args: Value, env: Value, cont: Value, shift: Boolean = true) = {
+    val o = implicitly[Ops[R]]; import o._
+    fun match {
+      case Clo(params, body, cenv) =>
+        meta_apply[R](m, S("eval-begin"), body, env_extend[R](cenv, params, args), cont)
+      case Evalfun(key) =>
+        val f = funs(key).fun[R]
+        apply_cont[R](m, env, cont, f(if (shift) MEnv(env, m) else m)(args))
+      case Prim(p) =>
+        apply_cont[R](m, env, cont, apply_primitive(p, args))
+      case Cont(_) =>
+        apply_cont[R](m, env, cont, apply_cont[R](m, env, fun, car(args)))
+    }
   }
 
   def base_apply[R[_]:Ops](m: MEnv, fun: R[Value], args: R[Value], env: Value, cont: Value) = {
