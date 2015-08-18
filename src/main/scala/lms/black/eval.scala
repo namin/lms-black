@@ -189,12 +189,18 @@ object eval {
     static_apply[R](meta_menv, fun, args, meta_env, meta_cont)
   }
 
-  def base_evlist[R[_]:Ops](m: MEnv, exps: Value, env: Value, cont: Value): R[Value] = {
+  def eval_list_fun: Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
+      val P(exps, P(env, P(cont, N))) = vc
+      eval_list[R](m, exps, env, cont)
+    }}
+  }
+  def eval_list[R[_]:Ops](m: MEnv, exps: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     exps match {
       case N => apply_cont[R](m, env, cont, lift(N))
       case P(e, es) => meta_apply[R](m, S("base-eval"), e, env, mkCont[R]({ v =>
-        base_evlist[R](m, es, env, mkCont[R]({ vs =>
+        meta_apply[R](m, S("eval-list"), es, env, mkCont[R]({ vs =>
           apply_cont[R](m, env, cont, makePair(v, vs))
         }))
       }))
@@ -249,7 +255,7 @@ object eval {
     val o = implicitly[Ops[R]]; import o._
     val P(fun, args) = exp
     meta_apply[R](m, S("base-eval"), fun, env, mkCont[R]({ v =>
-      base_evlist[R](m, args, env, mkCont[R]({ vs =>
+      meta_apply[R](m, S("eval-list"), args, env, mkCont[R]({ vs =>
         base_apply[R](m, v, vs, env, cont)
       }))
     }))
@@ -334,7 +340,7 @@ object eval {
     val ps = value_to_list(pairs)
     val params = list_to_value(ps.map(car))
     val args = list_to_value(ps.map{a => car(cdr(a))})
-    base_evlist[R](m, args, env, mkCont[R]{vs =>
+    meta_apply[R](m, S("eval-list"), args, env, mkCont[R]{vs =>
       meta_apply[R](m, S("eval-begin"), body,
         env_extend[R](env, params, if (inRep) Code(vs) else vs.asInstanceOf[Value]),
         cont)
@@ -436,7 +442,7 @@ object eval {
   def make_pairs[R[_]:Ops](ks: Value, vs: Value): Value = (ks, vs) match {
     case (N, N) => N
     case (N, Code(_)) => N
-    //case (S(s), _) => cons(cons(ks, vs), N)
+    case (S(s), _) => cons(cons(ks, vs), N)
     case (P(k, ks), P(v, vs)) => cons(cons(k, cell_new(v)), make_pairs[R](ks, vs))
     case (P(k, ks), Code(c : R[Value])) =>
       val o = implicitly[Ops[R]]
@@ -494,6 +500,7 @@ object eval {
     P(S("eval-lambda"), cell_new(evalfun(eval_lambda_fun))),
     P(S("eval-application"), cell_new(evalfun(eval_application_fun))),
     P(S("eval-var"), cell_new(evalfun(eval_var_fun))),
+    P(S("eval-list"), cell_new(evalfun(eval_list_fun))),
     P(S("base-eval"), cell_new(evalfun(base_eval_fun))),
     P(S("null?"), Prim("null?")),
     P(S("number?"), Prim("number?")),
@@ -542,7 +549,8 @@ object eval {
     case Cell(key) => pp(cells(key))
     case Code(c) => (false, "{"+c+"}")
   }
-  def display(v: Value) = print(addParen(pp(v)))
+  def show(v: Value) = addParen(pp(v))
+  def display(v: Value) = print(show(v))
   def newline() = println("")
 
   def init_menv[R[_]:Ops]: MEnv = MEnv(init_env, init_menv[R])

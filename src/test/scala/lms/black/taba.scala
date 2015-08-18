@@ -1,0 +1,112 @@
+package scala.lms.black
+
+import eval._
+import repl._
+
+import org.scalatest.BeforeAndAfter
+
+class TestTaba extends TestSuite with BeforeAndAfter {
+  val under = "taba_"
+
+  before {
+    clean()
+  }
+
+  def add_app_hook = """
+(define add-app-hook!
+  (lambda (n ev)
+    (let ((original-eval-application eval-application))
+      (set! eval-application
+            (lambda (exp env cont)
+              (if (eq? (car exp) n)
+                  (ev exp env cont)
+                  (original-eval-application exp env cont)))))))
+"""
+
+  def taba = """(begin
+(define eval-taba-call
+  (lambda (add! original-eval-application)
+    (lambda (exp env cont)
+      (eval-list
+       (cdr exp) env
+       (lambda (ans-args)
+         (original-eval-application
+          exp env
+          (lambda (ans)
+            (add! ans-args ans)
+            (cont ans))))))))
+
+(define map (lambda (f xs) 'TODO))
+(set! map
+  (lambda (f xs)
+    (if (null? xs)
+        '()
+        (cons (f (car xs)) (map f (cdr xs))))))
+
+(define list (lambda args args))
+
+(define eval-taba
+  (lambda (fns)
+    (lambda (exp env cont)
+      (let ((original-eval-application eval-application)
+            (stack '()))
+        (map (lambda (fn)
+               (add-app-hook!
+                fn
+                (eval-taba-call
+                 (lambda (ans-args ans)
+                   (set! stack (cons (list fn ans-args ans) stack)))
+                 eval-application)))
+             fns)
+        (base-eval
+         exp env
+         (lambda (ans)
+           (set! eval-application original-eval-application)
+           (cont
+            (list ans stack))))))))
+
+(add-app-hook!
+ 'taba
+ (lambda (exp env cont)
+   ((eval-taba (car (cdr exp))) (car (cdr (cdr exp))) env cont)))
+)"""
+
+  def cnv = """(begin
+(define zip (lambda (xs ys) 'TODO))
+(set! zip
+  (lambda (xs ys)
+    (if (if (null? xs) #t (null? ys))
+       '()
+       (cons
+        (cons (car xs) (car ys))
+        (zip (cdr xs) (cdr ys))))))
+
+(define walk (lambda (xs ys) 'TODO))
+(set! walk
+  (lambda (xs ys)
+     (if (null? xs)
+         (cons '() ys)
+         (let ((rys (walk (cdr xs) ys)))
+           (let ((r (car rys))
+                 (ys (cdr rys)))
+             (cons (cons (cons (car xs) (car ys)) r)
+                   (cdr ys)))))))
+(define cnv
+  (lambda (xs ys)
+    (car (walk xs ys))))
+)"""
+
+  test("TABA cnv") {
+    ev(s"(EM $add_app_hook)")
+    ev(s"(EM $taba)")
+    ev(cnv)
+    assertResult{"""(((1 . c) (2 . b) (3 . a))
+((cnv ((1 2 3) (a b c)) ((1 . c) (2 . b) (3 . a)))
+(walk ((1 2 3) (a b c)) (((1 . c) (2 . b) (3 . a))))
+(walk ((2 3) (a b c)) (((2 . b) (3 . a)) c))
+(walk ((3) (a b c)) (((3 . a)) b c))
+(walk (() (a b c)) (() a b c))))""".replace("\n", " ")}{
+      show(ev("(taba (cnv walk) (cnv '(1 2 3) '(a b c)))"))
+    }
+  }
+}
