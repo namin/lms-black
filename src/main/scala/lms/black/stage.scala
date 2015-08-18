@@ -174,7 +174,7 @@ trait EvalDslGen extends ScalaGenIfThenElse {
     })
     case CellNewRep(v) => emitValDef(sym, cell_es.get(sym.asInstanceOf[Exp[Value]]) match {
       case Some(_) => quoteL(v)
-      case None => quoteO+".cellNew("+quote(v)+")"
+      case None => quoteO+".cellNew("+quoteL(v)+")"
     })
     case BaseApplyRep(m, f, args, env, cont_x, cont_y) =>
       emitValDef(sym, quoteO+".app("+m+", "+quoteL(f)+", "+quoteL(args)+", "+quote(Const(env))+", mkCont["+quoteR+"]{("+quote(cont_x)+": "+quoteR+"[Value]) =>")
