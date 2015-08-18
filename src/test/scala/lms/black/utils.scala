@@ -17,10 +17,11 @@ trait TestSuite extends FunSuite {
     }
     output.toString()
   }
-  def checkOut(label: String, suffix: String, thunk: => Unit) = {
+  def checkOut(label: String, thunk: => Unit, suffix: String = "scala") = {
     val output = new ByteArrayOutputStream()
-    scala.Console.setOut(new PrintStream(output))
-    thunk
+    scala.Console.withOut(new PrintStream(output)) {
+      thunk
+    }
     check(label, output.toString(), suffix = suffix)
   }
   def check(label: String, raw_code: String, suffix: String = "scala") = {
