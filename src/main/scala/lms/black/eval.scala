@@ -461,6 +461,7 @@ object eval {
   }
 
   def apply_primitive(p: String, args: Value): Value = (p, args) match {
+    case ("null?", P(a, N)) => B(a==N)
     case ("number?", P(a, N)) => B(a match {
       case I(_) => true
       case _ => false
@@ -473,6 +474,7 @@ object eval {
     case ("cons", P(a, P(d, N))) => cons(a, d)
     case ("eq?", P(a, P(b, N))) => B(a==b)
     case ("display", P(a, N)) => display(a); I(0)
+    case ("newline", N) => newline(); I(0)
   }
 
   def init_frame = list_to_value(List(
@@ -488,6 +490,7 @@ object eval {
     P(S("eval-application"), cell_new(evalfun(eval_application_fun))),
     P(S("eval-var"), cell_new(evalfun(eval_var_fun))),
     P(S("base-eval"), cell_new(evalfun(base_eval_fun))),
+    P(S("null?"), Prim("null?")),
     P(S("number?"), Prim("number?")),
     P(S("<"), Prim("<")),
     P(S("+"), Prim("+")),
@@ -496,7 +499,8 @@ object eval {
     P(S("cdr"), Prim("cdr")),
     P(S("cons"), Prim("cons")),
     P(S("eq?"), Prim("eq?")),
-    P(S("display"), Prim("display"))
+    P(S("display"), Prim("display")),
+    P(S("newline"), Prim("newline"))
   ))
   def init_env = cons(Cell(addCell(init_frame)), N)
 
@@ -533,7 +537,8 @@ object eval {
     case Cell(key) => pp(cells(key))
     case Code(c) => (false, "{"+c+"}")
   }
-  def display(v: Value) = println(addParen(pp(v)))
+  def display(v: Value) = print(addParen(pp(v)))
+  def newline() = println("")
 
   def init_menv[R[_]:Ops]: MEnv = MEnv(init_env, init_menv[R])
 }
