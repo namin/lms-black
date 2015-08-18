@@ -149,4 +149,24 @@ class TestInstr extends TestSuite with BeforeAndAfter {
 #total: 41
 """}{captureOut{ev("(instr (to-int (prd-alt c2)))")}}
   }
+
+  // is this a bug? because of the way instr works,
+  // we cannot precompile
+  test("instrument church numerals (all compiled)") {
+    ev(s"(EM $eval_instr)".replace("(lambda", "(clambda"))
+    ev(s"(EM $hook_instr)".replace("lambda", "clambda"))
+    ev(church.replace("lambda", "clambda"))
+    assertResult{"""
+#var: 3
+#lam: 0
+#app: 2
+#total: 5
+"""}{captureOut{ev("(instr (to-int (prd c2)))")}}
+    assertResult{"""
+#var: 3
+#lam: 0
+#app: 2
+#total: 5
+"""}{captureOut{ev("(instr (to-int (prd-alt c2)))")}}
+  }
 }
