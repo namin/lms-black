@@ -11,6 +11,16 @@ under modified, possibly also compiled, semantics -- a question raised
 by Kenichi Asai in his GPCE 2014 paper, _Compiling a Reflective
 Language using MetaOCaml_.
 
-How? First, all functions (at any level) are polymorphic as to whether
-they generate code or run. Second, code generated is also polymorphic
-in this way!
+How? All functions are polymorphic as to whether they generate code or run.
+Generated code, when compiled, is also polymorphic in this way so that there's
+no difference between built-in and compiled functions.
+
+An [example](https://github.com/namin/lms-black/blob/master/src/test/scala/lms/black/em.scala#L15).
+Suppose we change the meta-interpreter so that it increments
+a counter each time a variable named `n` is accessed. Re-defining fibonacci
+with parameter `n` as a compiled lambda will generate code that includes
+a code for a counter increment each time `n` is mentioned in the body.
+Running this compiled `fib` function gives the same result as an uncompiled
+`fib` function evaluated by the modified interpreter. Still, once we undo
+the modifications to the interpreter, the previously compiled `fib` function
+will still update the counter.
