@@ -7,9 +7,9 @@ object parser extends JavaTokenParsers with PackratParsers {
     def exp: Parser[Value] =
       "#f" ^^ { case _ => B(false) } |
       "#t" ^^ { case _ => B(true) } |
-      "[0-9]+".r ^^ { case s => I(s.toInt) } |
+      wholeNumber ^^ { case s => I(s.toInt) } |
       """[^\s\(\)'"]+""".r ^^ { case s => S(s) } |
-      "\"" ~> """[^"]*""".r <~ "\"" ^^ { case s => Str(s) } |
+      stringLiteral ^^ { case s => Str(s.substring(1, s.length-1)) } |
       "'" ~> exp ^^ { case s => P(S("quote"), P(s, N)) } |
       "()" ^^ { case _ => N } |
       "(" ~> exps <~ ")" ^^ { case vs => vs }
