@@ -12,7 +12,8 @@ class TestBase extends TestSuite with BeforeAndAfter {
     clean()
   }
 
-  def compileIf(c: Boolean)(s: String) = s.replace("lambda", "clambda")
+  def compileIf(c: Boolean)(s: String) =
+    if (c) s.replace("lambda", "clambda") else s
 
   // There's no reason to use the Y combinator, except that it
   // exercises code more subtly than a plain `define`.
