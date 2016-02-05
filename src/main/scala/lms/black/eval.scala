@@ -158,7 +158,7 @@ object eval {
       f(v)
     case _ =>
       val o = implicitly[Ops[R]]; import o._
-      static_apply[R](MEnv(env, m), cont,
+      static_apply[R](m, cont,
         P((if (inRep) Code(v) else v.asInstanceOf[Value]), N),
         env, mkCont[R]{v => v})
   }
