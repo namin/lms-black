@@ -47,7 +47,7 @@ object eval {
     case Code(cc) => cell_set(cc.asInstanceOf[Value], v)
   }
   abstract class Fun[W[_]:Ops] extends Serializable {
-    def fun[R[_]:Ops](implicit ev: Convert[W,R]): MEnv => W[Value] => R[Value]
+    def fun[R[_]:Ops](implicit ev: Convert[W,R]): W[Value] => R[Value]
   }
   var funs = Map[Int, Fun[NoRep]]()
   def addFun(f: Fun[NoRep]): Int = {
@@ -122,7 +122,7 @@ object eval {
     def app(m: MEnv, fun: R[Value], args: R[Value], env: Value, cont: Value): R[Value]
     def isTrue(v: R[Value]): R[Boolean]
     def ifThenElse[A:Tag](cond: R[Boolean], thenp: => R[A], elsep: => R[A]): R[A]
-    def makeFun(m: MEnv, f: Fun[R]): R[Value]
+    def makeFun(f: Fun[R]): R[Value]
     def makePair(car: R[Value], cdr: R[Value]): R[Value]
     def getCar(p: R[Value]): R[Value]
     def getCdr(p: R[Value]): R[Value]
@@ -142,7 +142,7 @@ object eval {
       case B(b) => b
     }
     def ifThenElse[A:Tag](cond: Boolean, thenp: => A, elsep: => A): A = if (cond) thenp else elsep
-    def makeFun(m: MEnv, f: Fun[NoRep]) = evalfun(f)
+    def makeFun(f: Fun[NoRep]) = evalfun(f)
     def makePair(car: Value, cdr: Value) = cons(car, cdr)
     def getCar(p: Value) = car(p)
     def getCdr(p: Value) = cdr(p)
@@ -160,17 +160,17 @@ object eval {
       val o = implicitly[Ops[R]]; import o._
       static_apply[R](MEnv(env, m), cont,
         P((if (inRep) Code(v) else v.asInstanceOf[Value]), N),
-        env, mkCont[R]{v => v}, shift=false)
+        env, mkCont[R]{v => v})
   }
 
-  def static_apply[R[_]:Ops](m: MEnv, fun: Value, args: Value, env: Value, cont: Value, shift: Boolean = true) = {
+  def static_apply[R[_]:Ops](m: MEnv, fun: Value, args: Value, env: Value, cont: Value) = {
     val o = implicitly[Ops[R]]; import o._
     fun match {
       case Clo(params, body, cenv) =>
         meta_apply[R](m, S("eval-begin"), body, env_extend[R](cenv, params, args), cont)
       case Evalfun(key) =>
         val f = funs(key).fun[R]
-        apply_cont[R](m, env, cont, f(if (shift) MEnv(env, m) else m)(args))
+        apply_cont[R](m, env, cont, f(args))
       case Prim(p) =>
         apply_cont[R](m, env, cont, apply_primitive(p, args))
       case Cont(_) =>
@@ -195,11 +195,11 @@ object eval {
     static_apply[R](meta_menv, fun, args, meta_env, meta_cont)
   }
 
-  def eval_list_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
+  def eval_list_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
       val P(exps, P(env, P(cont, N))) = vc
       eval_list[R](m, exps, env, cont)
-    }}
+    }
   }
   def eval_list[R[_]:Ops](m: MEnv, exps: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
@@ -213,11 +213,11 @@ object eval {
     }
   }
 
-  def base_eval_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
+  def base_eval_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
       val P(exp, P(env, P(cont, N))) = vc
       base_eval[R](m, exp, env, cont)
-    }}
+    }
   }
   def base_eval[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
@@ -237,11 +237,11 @@ object eval {
     }
   }
 
-  def eval_begin_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
+  def eval_begin_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
       val P(body, P(env, P(cont, N))) = vc
       eval_begin[R](m, body, env, cont)
-    }}
+    }
   }
   def eval_begin[R[_]:Ops](m: MEnv, body: Value, env: Value, cont: Value): R[Value] =
     body match {
@@ -251,11 +251,11 @@ object eval {
       })
     }
 
-  def eval_application_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
+  def eval_application_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
       val P(exp, P(env, P(cont, N))) = vc
       eval_application[R](m, exp, env, cont)
-    }}
+    }
   }
   def eval_application[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
@@ -267,11 +267,11 @@ object eval {
     }))
   }
 
-  def eval_var_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
+  def eval_var_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
       val P(exp, P(env, P(cont, N))) = vc
       eval_var[R](m, exp, env, cont)
-    }}
+    }
   }
   def eval_var[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
@@ -282,11 +282,11 @@ object eval {
     }
   }
 
-  def eval_lambda_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
+  def eval_lambda_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
       val P(exp, P(env, P(cont, N))) = vc
       eval_lambda[R](m, exp, env, cont)
-    }}
+    }
   }
   def eval_lambda[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
@@ -296,11 +296,11 @@ object eval {
     apply_cont(m, env, cont, lift(Clo(params, body, env)))
   }
 
-  def eval_clambda_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
+  def eval_clambda_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
       val P(exp, P(env, P(cont, N))) = vc
       eval_clambda[R](m, exp, env, cont)
-    }}
+    }
   }
   def eval_clambda[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
@@ -319,24 +319,24 @@ object eval {
       r.precompile
       apply_cont(m, env, cont, lift(evalfun(r.f)))
     } else {
-      val f = makeFun(m, new Fun[R] {
-        def fun[RF[_]:Ops](implicit ev: Convert[R,RF]) = {(m2: MEnv) => {
+      val f = makeFun(new Fun[R] {
+        def fun[RF[_]:Ops](implicit ev: Convert[R,RF]) = {
           ((v: R[Value]) => {
             meta_apply[RF](m, S("eval-begin"), body,
               env_extend[RF](env, params, Code(v)),
               mkCont[R]{v => v})
           })
-        }}
+        }
       })
       apply_cont(m, env, cont, f)
     }
   }
 
-  def eval_let_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
+  def eval_let_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
       val P(exp, P(env, P(cont, N))) = vc
       eval_let[R](m, exp, env, cont)
-    }}
+    }
   }
   def eval_let[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
@@ -353,11 +353,11 @@ object eval {
     })
   }
 
-  def eval_if_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
+  def eval_if_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
       val P(exp, P(env, P(cont, N))) = vc
       eval_if[R](m, exp, env, cont)
-    }}
+    }
   }
   def eval_if[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
@@ -371,11 +371,11 @@ object eval {
     }))
   }
 
-  def eval_set_bang_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
+  def eval_set_bang_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
       val P(exp, P(env, P(cont, N))) = vc
       eval_set_bang[R](m, exp, env, cont)
-    }}
+    }
   }
   def eval_set_bang[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
@@ -389,11 +389,11 @@ object eval {
     }))
   }
 
-  def eval_define_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
+  def eval_define_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
       val P(exp, P(env, P(cont, N))) = vc
       eval_define[R](m, exp, env, cont)
-    }}
+    }
   }
   def eval_define[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
@@ -409,11 +409,11 @@ object eval {
     }))
   }
 
-  def eval_quote_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
+  def eval_quote_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
       val P(exp, P(env, P(cont, N))) = vc
       eval_quote[R](m, exp, env, cont)
-    }}
+    }
   }
   def eval_quote[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
@@ -423,11 +423,11 @@ object eval {
     apply_cont(m, env, cont, e)
   }
 
-  def eval_EM_fun: Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { (vc: Value) =>
+  def eval_EM_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
       val P(exp, P(env, P(cont, N))) = vc
       eval_EM[R](m, exp, env, cont)
-    }}
+    }
   }
   def eval_EM[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
@@ -495,20 +495,7 @@ object eval {
   def effectful_primitives = Set[Value](Prim("display"), Prim("newline"))
 
   def binding(s: String, v: Value): Value = P(S(s), cell_new(v, s))
-  def init_frame = list_to_value(List(
-    binding("eval-begin", evalfun(eval_begin_fun)),
-    binding("eval-EM", evalfun(eval_EM_fun)),
-    binding("eval-quote", evalfun(eval_quote_fun)),
-    binding("eval-define", evalfun(eval_define_fun)),
-    binding("eval-set!", evalfun(eval_set_bang_fun)),
-    binding("eval-if", evalfun(eval_if_fun)),
-    binding("eval-let", evalfun(eval_let_fun)),
-    binding("eval-clambda", evalfun(eval_clambda_fun)),
-    binding("eval-lambda", evalfun(eval_lambda_fun)),
-    binding("eval-application", evalfun(eval_application_fun)),
-    binding("eval-var", evalfun(eval_var_fun)),
-    binding("eval-list", evalfun(eval_list_fun)),
-    binding("base-eval", evalfun(base_eval_fun)),
+  def init_frame_list = List(
     P(S("null?"), Prim("null?")),
     P(S("number?"), Prim("number?")),
     P(S("<"), Prim("<")),
@@ -520,8 +507,26 @@ object eval {
     P(S("eq?"), Prim("eq?")),
     P(S("display"), Prim("display")),
     P(S("newline"), Prim("newline"))
-  ))
+  )
+  def init_frame = list_to_value(init_frame_list)
+  def init_mframe(m: => MEnv) = list_to_value(List(
+    binding("eval-begin", evalfun(eval_begin_fun(m))),
+    binding("eval-EM", evalfun(eval_EM_fun(m))),
+    binding("eval-quote", evalfun(eval_quote_fun(m))),
+    binding("eval-define", evalfun(eval_define_fun(m))),
+    binding("eval-set!", evalfun(eval_set_bang_fun(m))),
+    binding("eval-if", evalfun(eval_if_fun(m))),
+    binding("eval-let", evalfun(eval_let_fun(m))),
+    binding("eval-clambda", evalfun(eval_clambda_fun(m))),
+    binding("eval-lambda", evalfun(eval_lambda_fun(m))),
+    binding("eval-application", evalfun(eval_application_fun(m))),
+    binding("eval-var", evalfun(eval_var_fun(m))),
+    binding("eval-list", evalfun(eval_list_fun(m))),
+    binding("base-eval", evalfun(base_eval_fun(m)))) ++
+    init_frame_list
+  )
   def init_env = cons(cell_new(init_frame, "global"), N)
+  def init_meta_env(m: => MEnv) = cons(cell_new(init_mframe(m), "global"), N)
 
   def list_to_value(xs: List[Value]): Value = xs match {
     case Nil => N
@@ -560,5 +565,8 @@ object eval {
   def display(v: Value) = print(show(v))
   def newline() = println("")
 
-  def init_menv[R[_]:Ops]: MEnv = MEnv(init_env, init_menv[R])
+  def init_menv[R[_]:Ops]: MEnv = {
+    lazy val m: MEnv = MEnv(init_meta_env(m), init_menv[R])
+    m
+  }
 }

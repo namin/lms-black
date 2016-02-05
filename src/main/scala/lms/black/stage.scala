@@ -7,7 +7,7 @@ trait EvalDsl extends IfThenElse with LiftBoolean {
   implicit def valTyp: Typ[Value]
   implicit def boolTyp: Typ[Boolean]
   def base_apply_rep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value): Rep[Value]
-  def make_fun_rep(m: MEnv, f: Fun[Rep]): Rep[Value]
+  def make_fun_rep(f: Fun[Rep]): Rep[Value]
   def if_then_else_rep[A:Typ](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A]
   def get_car_rep(p: Rep[Value]): Rep[Value]
   def get_cdr_rep(p: Rep[Value]): Rep[Value]
@@ -23,7 +23,7 @@ trait EvalDsl extends IfThenElse with LiftBoolean {
     def app(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value) = base_apply_rep(m, f, args, env, cont)
     def isTrue(v: Rep[Value]): Rep[Boolean] = is_true_rep(v)
     def ifThenElse[A:Tag](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A] = if_then_else_rep(cond, thenp, elsep)
-    def makeFun(m: MEnv, f: Fun[Rep]) = make_fun_rep(m, f)
+    def makeFun(f: Fun[Rep]) = make_fun_rep(f)
     def makePair(car: Rep[Value], cdr: Rep[Value]) = make_pair_rep(car, cdr)
     def getCar(p: Rep[Value]) = get_car_rep(p)
     def getCdr(p: Rep[Value]) = get_cdr_rep(p)
@@ -108,7 +108,7 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
       omit_reads += f
       val Evalfun(ekey) = cells(cid)
       val efn = funs(ekey).fun[Rep]
-      val r = efn(MEnv(env, m))(vs)
+      val r = efn(vs)
       val fn = conts(key).fun[Rep]
       fn(r)
     case (Const(fcont@Cont(_)), Def(MakePairRep(a, Const(N))), _) =>
@@ -123,11 +123,11 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
   }
 
   case class EvalfunRep(x: Sym[Value], y: Block[Value]) extends Def[Value]
-  def make_fun_rep(m: MEnv, f: Fun[Rep]) = {
+  def make_fun_rep(f: Fun[Rep]) = {
     val x = fresh[Value]
     val y = reifyEffects{
       val fn = f.fun[Rep]
-      fn(m)(x)
+      fn(x)
     }
     reflectEffect(EvalfunRep(x, y))
   }
@@ -193,7 +193,7 @@ trait EvalDslGen extends ScalaGenIfThenElse {
       val a = rs.size.toString
       rs = a::rs
       val r2 = quoteR
-      emitValDef(sym, oldO+".makeFun(m, new Fun["+r1+"] { def fun["+r2+"[_]:Ops](implicit "+quoteEv+": Convert["+r1+","+r2+"]) = { (m: MEnv) => {(" + quote(x) + ": "+r1+"[Value]) => ")
+      emitValDef(sym, oldO+".makeFun(new Fun["+r1+"] { def fun["+r2+"[_]:Ops](implicit "+quoteEv+": Convert["+r1+","+r2+"]) = {(" + quote(x) + ": "+r1+"[Value]) => ")
       stream.println("val "+quoteO+" = implicitly[Ops["+r2+"]]")
       stream.println("implicit def convert_"+quoteEv+"(x: "+r1+"[Value]): "+r2+"[Value] = "+quoteEv+".convert(x)")
       if (!rs.tail.isEmpty) {
@@ -205,7 +205,7 @@ trait EvalDslGen extends ScalaGenIfThenElse {
       emitBlock(y)
       stream.println(quoteL(getBlockResult(y)) + ": "+r2+"[Value]")
       rs = rs.tail
-      stream.println("}}})")
+      stream.println("}})")
     case IfThenElse(c,a,b) =>
       stream.println("val " + quote(sym) + " = "+quoteO+".ifThenElse((" + quoteL(c) + "), {")
       emitBlock(a)
@@ -250,9 +250,9 @@ trait EvalDslImpl extends EvalDslExp { q =>
         // dummy function for CompileScala below to be happy casting
         stream.println("def apply(v: Value): Value = v")
 
-        stream.println("def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (m: MEnv) => { v => fun[R](m, v)(implicitly[Ops[R]], ev)  } }")
+        stream.println("def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { v => fun[R](v)(implicitly[Ops[R]], ev)  }")
 
-        stream.println("def fun[R[_]:Ops](m: MEnv, "+args.map(a => quote(a) + ":" + "Value"/*remap(a.tp)*/).mkString(", ")+")(implicit ev: Convert[NoRep,R]): "+sA+" = {")
+        stream.println("def fun[R[_]:Ops]("+args.map(a => quote(a) + ":" + "Value"/*remap(a.tp)*/).mkString(", ")+")(implicit ev: Convert[NoRep,R]): "+sA+" = {")
         stream.println("val o = implicitly[Ops[R]]; import o._")
 
         emitBlock(body)
