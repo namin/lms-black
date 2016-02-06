@@ -2,6 +2,7 @@
 Emitting Generated Code
 *******************************************/
 import language.higherKinds
+import language.implicitConversions
 import scala.lms.black.eval._
 class staged$0 extends Fun[NoRep] with (Value => Value) {
   def apply(v: Value): Value = v
