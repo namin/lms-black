@@ -17,7 +17,7 @@ class staged$0 extends Fun[NoRep] with (Value => Value) {
         val x6 = x5
         val x8 = x5
         val x9 = o1.makePair(x8, o1.lift(P(I(2), N)))
-        val x41 = o1.app(MEnv(0), o1.lift(Prim("<")), x9, P(P(P(S("n"), Code(x6)), N), P(P(P(S("fib"), Code(x2)), N), P(Cell("global"), N))), mkCont[R1]{(x10: R1[Value]) =>
+        val x41 = o1.app(o1.lift(Prim("<")), x9, mkCont[R1]{(x10: R1[Value]) =>
           val x11 = o1.isTrue(x10)
           val x39 = o1.ifThenElse((x11), {
             val x12 = x5
@@ -26,18 +26,18 @@ class staged$0 extends Fun[NoRep] with (Value => Value) {
             val x14 = x1
             val x15 = x5
             val x16 = o1.makePair(x15, o1.lift(P(I(1), N)))
-            val x37 = o1.app(MEnv(0), o1.lift(Prim("-")), x16, P(P(P(S("n"), Code(x6)), N), P(P(P(S("fib"), Code(x2)), N), P(Cell("global"), N))), mkCont[R1]{(x17: R1[Value]) =>
+            val x37 = o1.app(o1.lift(Prim("-")), x16, mkCont[R1]{(x17: R1[Value]) =>
               val x18 = o1.makePair(x17, o1.lift(N))
-              val x35 = o1.app(MEnv(0), x14, x18, P(P(P(S("n"), Code(x6)), N), P(P(P(S("fib"), Code(x2)), N), P(Cell("global"), N))), mkCont[R1]{(x19: R1[Value]) =>
+              val x35 = o1.app(x14, x18, mkCont[R1]{(x19: R1[Value]) =>
                 val x20 = x1
                 val x21 = x5
                 val x22 = o1.makePair(x21, o1.lift(P(I(2), N)))
-                val x33 = o1.app(MEnv(0), o1.lift(Prim("-")), x22, P(P(P(S("n"), Code(x6)), N), P(P(P(S("fib"), Code(x2)), N), P(Cell("global"), N))), mkCont[R1]{(x23: R1[Value]) =>
+                val x33 = o1.app(o1.lift(Prim("-")), x22, mkCont[R1]{(x23: R1[Value]) =>
                   val x24 = o1.makePair(x23, o1.lift(N))
-                  val x31 = o1.app(MEnv(0), x20, x24, P(P(P(S("n"), Code(x6)), N), P(P(P(S("fib"), Code(x2)), N), P(Cell("global"), N))), mkCont[R1]{(x25: R1[Value]) =>
+                  val x31 = o1.app(x20, x24, mkCont[R1]{(x25: R1[Value]) =>
                     val x26 = o1.makePair(x25, o1.lift(N))
                     val x27 = o1.makePair(x19, x26)
-                    val x29 = o1.app(MEnv(0), o1.lift(Prim("+")), x27, P(P(P(S("n"), Code(x6)), N), P(P(P(S("fib"), Code(x2)), N), P(Cell("global"), N))), mkCont[R1]{(x28: R1[Value]) =>
+                    val x29 = o1.app(o1.lift(Prim("+")), x27, mkCont[R1]{(x28: R1[Value]) =>
                       x28: R1[Value]
                     })
                     x29: R1[Value]

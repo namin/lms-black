@@ -18,7 +18,7 @@ class staged$0 extends Fun[NoRep] with (Value => Value) {
         val x8 = x5
         val x9 = x5
         val x10 = o1.makePair(x9, o1.lift(N))
-        val x12 = o1.app(MEnv(0), x8, x10, P(P(P(S("F"), Code(x6)), N), P(P(P(S("fun"), Code(x2)), N), P(Cell("global"), N))), mkCont[R1]{(x11: R1[Value]) =>
+        val x12 = o1.app(x8, x10, mkCont[R1]{(x11: R1[Value]) =>
           x11: R1[Value]
         })
         x12: R1[Value]
@@ -39,10 +39,10 @@ class staged$0 extends Fun[NoRep] with (Value => Value) {
             val x24 = x16
             val x25 = x16
             val x26 = o2.makePair(x25, o2.lift(N))
-            val x33 = o2.app(MEnv(0), x24, x26, P(P(P(S("x"), Code(x22)), N), P(P(P(S("F"), Code(x17)), N), P(P(P(S("fun"), Code(x2)), N), P(Cell("global"), N)))), mkCont[R2]{(x27: R2[Value]) =>
+            val x33 = o2.app(x24, x26, mkCont[R2]{(x27: R2[Value]) =>
               val x28 = x21
               val x29 = o2.makePair(x28, o2.lift(N))
-              val x31 = o2.app(MEnv(0), x27, x29, P(P(P(S("x"), Code(x22)), N), P(P(P(S("F"), Code(x17)), N), P(P(P(S("fun"), Code(x2)), N), P(Cell("global"), N)))), mkCont[R2]{(x30: R2[Value]) =>
+              val x31 = o2.app(x27, x29, mkCont[R2]{(x30: R2[Value]) =>
                 x30: R2[Value]
               })
               x31: R2[Value]
@@ -50,13 +50,13 @@ class staged$0 extends Fun[NoRep] with (Value => Value) {
             x33: R2[Value]
         }})
         val x36 = o1.makePair(x35, o1.lift(N))
-        val x38 = o1.app(MEnv(0), x19, x36, P(P(P(S("F"), Code(x17)), N), P(P(P(S("fun"), Code(x2)), N), P(Cell("global"), N))), mkCont[R1]{(x37: R1[Value]) =>
+        val x38 = o1.app(x19, x36, mkCont[R1]{(x37: R1[Value]) =>
           x37: R1[Value]
         })
         x38: R1[Value]
     }})
     val x41 = o.makePair(x40, o.lift(N))
-    val x43 = o.app(MEnv(0), x14, x41, P(P(P(S("fun"), Code(x2)), N), P(Cell("global"), N)), mkCont[R]{(x42: R[Value]) =>
+    val x43 = o.app(x14, x41, mkCont[R]{(x42: R[Value]) =>
       x42: R[Value]
     })
     x43

@@ -12,16 +12,16 @@ class staged$0 extends Fun[NoRep] with (Value => Value) {
     val x2 = x1
     val x5 = o.cellRead(o.lift(Cell("counter")))
     val x6 = o.makePair(x5, o.lift(P(I(1), N)))
-    val x71 = o.app(MEnv(1), o.lift(Prim("+")), x6, P(P(P(S("e"), Code(S("n"))), P(P(S("r"), Code(P(P(P(S("n"), Code(x2)), N), P(Cell("global"), N)))), P(P(S("k"), Code(Cont(235))), N))), P(Cell("global1"), N)), mkCont[R]{(x7: R[Value]) =>
+    val x71 = o.app(o.lift(Prim("+")), x6, mkCont[R]{(x7: R[Value]) =>
       val x8 = o.cellSet(o.lift(Cell("counter")), x7)
       val x10 = x1
       val x11 = o.makePair(x10, o.lift(P(I(2), N)))
-      val x69 = o.app(MEnv(0), o.lift(Prim("<")), x11, P(P(P(S("n"), Code(x2)), N), P(Cell("global"), N)), mkCont[R]{(x12: R[Value]) =>
+      val x69 = o.app(o.lift(Prim("<")), x11, mkCont[R]{(x12: R[Value]) =>
         val x13 = o.isTrue(x12)
         val x67 = o.ifThenElse((x13), {
           val x14 = o.cellRead(o.lift(Cell("counter")))
           val x15 = o.makePair(x14, o.lift(P(I(1), N)))
-          val x21 = o.app(MEnv(1), o.lift(Prim("+")), x15, P(P(P(S("e"), Code(S("n"))), P(P(S("r"), Code(P(P(P(S("n"), Code(x2)), N), P(Cell("global"), N)))), P(P(S("k"), Code(Cont(251))), N))), P(Cell("global1"), N)), mkCont[R]{(x16: R[Value]) =>
+          val x21 = o.app(o.lift(Prim("+")), x15, mkCont[R]{(x16: R[Value]) =>
             val x17 = o.cellSet(o.lift(Cell("counter")), x16)
             val x19 = x1
             x19: R[Value]
@@ -31,26 +31,26 @@ class staged$0 extends Fun[NoRep] with (Value => Value) {
           val x25 = o.cellRead(o.lift(Cell("fib")))
           val x27 = o.cellRead(o.lift(Cell("counter")))
           val x28 = o.makePair(x27, o.lift(P(I(1), N)))
-          val x65 = o.app(MEnv(1), o.lift(Prim("+")), x28, P(P(P(S("e"), Code(S("n"))), P(P(S("r"), Code(P(P(P(S("n"), Code(x2)), N), P(Cell("global"), N)))), P(P(S("k"), Code(Cont(303))), N))), P(Cell("global1"), N)), mkCont[R]{(x29: R[Value]) =>
+          val x65 = o.app(o.lift(Prim("+")), x28, mkCont[R]{(x29: R[Value]) =>
             val x30 = o.cellSet(o.lift(Cell("counter")), x29)
             val x32 = x1
             val x33 = o.makePair(x32, o.lift(P(I(1), N)))
-            val x63 = o.app(MEnv(0), o.lift(Prim("-")), x33, P(P(P(S("n"), Code(x2)), N), P(Cell("global"), N)), mkCont[R]{(x34: R[Value]) =>
+            val x63 = o.app(o.lift(Prim("-")), x33, mkCont[R]{(x34: R[Value]) =>
               val x35 = o.makePair(x34, o.lift(N))
-              val x61 = o.app(MEnv(0), x25, x35, P(P(P(S("n"), Code(x2)), N), P(Cell("global"), N)), mkCont[R]{(x36: R[Value]) =>
+              val x61 = o.app(x25, x35, mkCont[R]{(x36: R[Value]) =>
                 val x38 = o.cellRead(o.lift(Cell("fib")))
                 val x40 = o.cellRead(o.lift(Cell("counter")))
                 val x41 = o.makePair(x40, o.lift(P(I(1), N)))
-                val x59 = o.app(MEnv(1), o.lift(Prim("+")), x41, P(P(P(S("e"), Code(S("n"))), P(P(S("r"), Code(P(P(P(S("n"), Code(x2)), N), P(Cell("global"), N)))), P(P(S("k"), Code(Cont(356))), N))), P(Cell("global1"), N)), mkCont[R]{(x42: R[Value]) =>
+                val x59 = o.app(o.lift(Prim("+")), x41, mkCont[R]{(x42: R[Value]) =>
                   val x43 = o.cellSet(o.lift(Cell("counter")), x42)
                   val x45 = x1
                   val x46 = o.makePair(x45, o.lift(P(I(2), N)))
-                  val x57 = o.app(MEnv(0), o.lift(Prim("-")), x46, P(P(P(S("n"), Code(x2)), N), P(Cell("global"), N)), mkCont[R]{(x47: R[Value]) =>
+                  val x57 = o.app(o.lift(Prim("-")), x46, mkCont[R]{(x47: R[Value]) =>
                     val x48 = o.makePair(x47, o.lift(N))
-                    val x55 = o.app(MEnv(0), x38, x48, P(P(P(S("n"), Code(x2)), N), P(Cell("global"), N)), mkCont[R]{(x49: R[Value]) =>
+                    val x55 = o.app(x38, x48, mkCont[R]{(x49: R[Value]) =>
                       val x50 = o.makePair(x49, o.lift(N))
                       val x51 = o.makePair(x36, x50)
-                      val x53 = o.app(MEnv(0), o.lift(Prim("+")), x51, P(P(P(S("n"), Code(x2)), N), P(Cell("global"), N)), mkCont[R]{(x52: R[Value]) =>
+                      val x53 = o.app(o.lift(Prim("+")), x51, mkCont[R]{(x52: R[Value]) =>
                         x52: R[Value]
                       })
                       x53: R[Value]

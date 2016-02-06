@@ -6,7 +6,7 @@ import scala.lms.common._
 trait EvalDsl extends IfThenElse with LiftBoolean {
   implicit def valTyp: Typ[Value]
   implicit def boolTyp: Typ[Boolean]
-  def base_apply_rep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value): Rep[Value]
+  def base_apply_rep(f: Rep[Value], args: Rep[Value], cont: Value): Rep[Value]
   def make_fun_rep(f: Fun[Rep]): Rep[Value]
   def if_then_else_rep[A:Typ](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A]
   def get_car_rep(p: Rep[Value]): Rep[Value]
@@ -20,7 +20,7 @@ trait EvalDsl extends IfThenElse with LiftBoolean {
     type Tag[A] = Typ[A]
     def valueTag = typ[Value]
     def lift(v: Value) = unit(v)
-    def app(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value) = base_apply_rep(m, f, args, env, cont)
+    def app(f: Rep[Value], args: Rep[Value], cont: Value) = base_apply_rep(f, args, cont)
     def isTrue(v: Rep[Value]): Rep[Boolean] = is_true_rep(v)
     def ifThenElse[A:Tag](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A] = if_then_else_rep(cond, thenp, elsep)
     def makeFun(f: Fun[Rep]) = make_fun_rep(f)
@@ -93,13 +93,13 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
   def hasCode(v: Value): Boolean = v match {
     case Code(c) => true
     case P(a, b) => hasCode(a) || hasCode(b)
-    case Clo(a, b, c) => hasCode(a) || hasCode(b) || hasCode(c)
+    case Clo(a, b, c, _) => hasCode(a) || hasCode(b) || hasCode(c)
     case _ => false
   }
 
   var omit_reads = Set[Rep[Value]]()
-  case class BaseApplyRep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont_x: Sym[Value], cont_y: Block[Value]) extends Def[Value]
-  def base_apply_rep(m: MEnv, f: Rep[Value], args: Rep[Value], env: Value, cont: Value): Rep[Value] = (f, args, cont) match {
+  case class BaseApplyRep(f: Rep[Value], args: Rep[Value], cont_x: Sym[Value], cont_y: Block[Value]) extends Def[Value]
+  def base_apply_rep(f: Rep[Value], args: Rep[Value], cont: Value): Rep[Value] = (f, args, cont) match {
     case (Const(fprim@Prim(p)), Const(vs@P(_, _)), Cont(key)) if !effectful_primitives.contains(fprim) && !hasCode(vs) =>
       val r = apply_primitive(p, vs)
       val fn = conts(key).fun[Rep]
@@ -117,7 +117,7 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
       val fn = conts(key).fun[Rep]
       fn(r)
     case (Const(fcont@Cont(_)), Def(MakePairRep(a, Const(N))), _) =>
-      apply_cont[Rep](m, env, fcont, a)
+      apply_cont[Rep](fcont, a)
     case (_, _, Cont(key)) =>
       //println("//DEBUG "+f+" applied to "+args)
       val x = fresh[Value]
@@ -125,7 +125,7 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
         val fn = conts(key).fun[Rep]
         fn(x)
       }
-      reflectEffect(BaseApplyRep(m, f, args, env, x, y))
+      reflectEffect(BaseApplyRep(f, args, x, y))
   }
 
   case class EvalfunRep(x: Sym[Value], y: Block[Value]) extends Def[Value]
@@ -139,7 +139,7 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
   }
 
   override def boundSyms(e: Any): List[Sym[Any]] = e match {
-    case BaseApplyRep(m, f, a, env, x, y) => syms(x) ::: effectSyms(y)
+    case BaseApplyRep(f, a, x, y) => syms(x) ::: effectSyms(y)
     case EvalfunRep(x, y) => syms(x) ::: effectSyms(y)
     case _ => super.boundSyms(e)
   }
@@ -170,7 +170,7 @@ trait EvalDslGen extends ScalaGenIfThenElse {
   override def quote(x: Exp[Any]) : String = x match {
     case Const(P(a, b)) => "P("+quoteInP(a)+", "+quoteInP(b)+")"
     case Const(Code(c)) => if (c.isInstanceOf[Rep[Any]]) quote(c.asInstanceOf[Rep[Any]]) else quote(Const(c.asInstanceOf[Value]))
-    case Const(Clo(param, body, env)) =>  "Clo("+quote(Const(param))+", "+quote(Const(body))+", "+quote(Const(env))+")"
+    case Const(Clo(param, body, env, m)) =>  "Clo("+quote(Const(param))+", "+quote(Const(body))+", "+quote(Const(env))+", "+m.toString+")"
     case _ => super.quote(x)
   }
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
@@ -188,8 +188,8 @@ trait EvalDslGen extends ScalaGenIfThenElse {
       case Some(_) => quoteL(v)
       case None => quoteO+".cellNew("+quoteL(v)+", "+quote(Const(s))+")"
     })
-    case BaseApplyRep(m, f, args, env, cont_x, cont_y) =>
-      emitValDef(sym, quoteO+".app("+m+", "+quoteL(f)+", "+quoteL(args)+", "+quote(Const(env))+", mkCont["+quoteR+"]{("+quote(cont_x)+": "+quoteR+"[Value]) =>")
+    case BaseApplyRep(f, args, cont_x, cont_y) =>
+      emitValDef(sym, quoteO+".app("+quoteL(f)+", "+quoteL(args)+", mkCont["+quoteR+"]{("+quote(cont_x)+": "+quoteR+"[Value]) =>")
       emitBlock(cont_y)
       stream.println(quoteL(getBlockResult(cont_y)) + ": "+quoteR+"[Value]")
       stream.println("})")

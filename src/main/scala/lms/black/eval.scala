@@ -15,7 +15,7 @@ object eval {
   case class Prim(p: String) extends Value {
     override def toString = "Prim(\""+p+"\")"
   }
-  case class Clo(params: Value, body: Value, env: Value) extends Value
+  case class Clo(params: Value, body: Value, env: Value, menv: MEnv) extends Value
   case class Evalfun(key: Int) extends Value
   case class Code[R[_]](c: R[Value]) extends Value
   case class Cont(key: Int) extends Value
@@ -119,7 +119,7 @@ object eval {
     type Tag[A]
     implicit def valueTag: Tag[Value]
     implicit def lift(v: Value): R[Value]
-    def app(m: MEnv, fun: R[Value], args: R[Value], env: Value, cont: Value): R[Value]
+    def app(fun: R[Value], args: R[Value], cont: Value): R[Value]
     def isTrue(v: R[Value]): R[Boolean]
     def ifThenElse[A:Tag](cond: R[Boolean], thenp: => R[A], elsep: => R[A]): R[A]
     def makeFun(f: Fun[R]): R[Value]
@@ -136,8 +136,7 @@ object eval {
     type Tag[A] = Unit
     def valueTag = ()
     def lift(v: Value) = v
-    def app(m: MEnv, fun: Value, args: Value, env: Value, cont: Value) =
-      static_apply[NoRep](m, fun, args, env, cont)
+    def app(fun: Value, args: Value, cont: Value) = static_apply[NoRep](fun, args, cont)
     def isTrue(v: Value) = v match {
       case B(b) => b
     }
@@ -152,35 +151,35 @@ object eval {
     def inRep = false
   }
 
-  def apply_cont[R[_]:Ops](m: MEnv, env: Value, cont: Value, v: R[Value]): R[Value] = cont match {
+  def apply_cont[R[_]:Ops](cont: Value, v: R[Value]): R[Value] = cont match {
     case Cont(key) =>
       val f = conts(key).fun[R]
       f(v)
     case _ =>
       val o = implicitly[Ops[R]]; import o._
-      static_apply[R](m, cont,
+      static_apply[R](cont,
         P((if (inRep) Code(v) else v.asInstanceOf[Value]), N),
-        env, mkCont[R]{v => v})
+        mkCont[R]{v => v})
   }
 
-  def static_apply[R[_]:Ops](m: MEnv, fun: Value, args: Value, env: Value, cont: Value) = {
+  def static_apply[R[_]:Ops](fun: Value, args: Value, cont: Value) = {
     val o = implicitly[Ops[R]]; import o._
     fun match {
-      case Clo(params, body, cenv) =>
+      case Clo(params, body, cenv, m) =>
         meta_apply[R](m, S("eval-begin"), body, env_extend[R](cenv, params, args), cont)
       case Evalfun(key) =>
         val f = funs(key).fun[R]
-        apply_cont[R](m, env, cont, f(args))
+        apply_cont[R](cont, f(args))
       case Prim(p) =>
-        apply_cont[R](m, env, cont, apply_primitive(p, args))
+        apply_cont[R](cont, apply_primitive(p, args))
       case Cont(_) =>
-        apply_cont[R](m, env, cont, apply_cont[R](m, env, fun, car(args)))
+        apply_cont[R](cont, apply_cont[R](fun, car(args)))
     }
   }
 
   def base_apply[R[_]:Ops](m: MEnv, fun: R[Value], args: R[Value], env: Value, cont: Value) = {
     val o = implicitly[Ops[R]]
-    o.app(m, fun, args, env, cont)
+    o.app(fun, args, cont)
   }
 
   def meta_apply[R[_]:Ops](m: MEnv, s: Value, exp: Value, env: Value, cont: Value): R[Value] = {
@@ -190,10 +189,9 @@ object eval {
       case v@Cell(_) => cell_read(v)
     }
     val cont_id = mkCont[R]{v => v}
-    val (arg_cont, meta_cont) = //if (inRep) (cont_id, cont) else
-      (mkCont[R]{v => apply_cont[R](meta_menv, meta_env, cont, v)}, cont_id)
+    val (arg_cont, meta_cont) = (cont, cont_id)
     val args = P(exp, P(env, P(arg_cont, N)))
-    static_apply[R](meta_menv, fun, args, meta_env, meta_cont)
+    static_apply[R](fun, args, meta_cont)
   }
 
   def eval_list_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
@@ -205,10 +203,10 @@ object eval {
   def eval_list[R[_]:Ops](m: MEnv, exps: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     exps match {
-      case N => apply_cont[R](m, env, cont, lift(N))
+      case N => apply_cont[R](cont, lift(N))
       case P(e, es) => meta_apply[R](m, S("base-eval"), e, env, mkCont[R]({ v =>
         meta_apply[R](m, S("eval-list"), es, env, mkCont[R]({ vs =>
-          apply_cont[R](m, env, cont, makePair(v, vs))
+          apply_cont[R](cont, makePair(v, vs))
         }))
       }))
     }
@@ -223,7 +221,7 @@ object eval {
   def base_eval[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     exp match {
-      case I(_) | B(_) | Str(_) => apply_cont[R](m, env, cont, lift(exp))
+      case I(_) | B(_) | Str(_) => apply_cont[R](cont, lift(exp))
       case S(sym) => meta_apply[R](m, S("eval-var"), exp, env, cont)
       case P(S("lambda"), _) => meta_apply[R](m, S("eval-lambda"), exp, env, cont)
       case P(S("clambda"), _) => meta_apply[R](m, S("eval-clambda"), exp, env, cont)
@@ -277,9 +275,9 @@ object eval {
   def eval_var[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     env_get(env, exp) match {
-      case Code(v: R[Value]) => apply_cont[R](m, env, cont, cellRead(v))
-      case v@Cell(_) => apply_cont[R](m, env, cont, cellRead(v))
-      case v => apply_cont(m, env, cont, lift(v))
+      case Code(v: R[Value]) => apply_cont[R](cont, cellRead(v))
+      case v@Cell(_) => apply_cont[R](cont, cellRead(v))
+      case v => apply_cont(cont, lift(v))
     }
   }
 
@@ -294,7 +292,7 @@ object eval {
     val (params, body) = exp match {
       case P(_, P(params, body)) => (params, body)
     }
-    apply_cont(m, env, cont, lift(Clo(params, body, env)))
+    apply_cont(cont, lift(Clo(params, body, env, m)))
   }
 
   def eval_clambda_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
@@ -318,7 +316,7 @@ object eval {
       }
       val r = new EvalDslDriver with Program
       r.precompile
-      apply_cont(m, env, cont, lift(evalfun(r.f)))
+      apply_cont(cont, lift(evalfun(r.f)))
     } else {
       val f = makeFun(new Fun[R] {
         def fun[RF[_]:Ops](implicit ev: Convert[R,RF]) = {
@@ -329,7 +327,7 @@ object eval {
           })
         }
       })
-      apply_cont(m, env, cont, f)
+      apply_cont(cont, f)
     }
   }
 
@@ -386,7 +384,7 @@ object eval {
     meta_apply[R](m, S("base-eval"), body, env, mkCont[R]({ v =>
       val p = env_get(env, name)
       cellSet(lift(p), v)
-      apply_cont(m, env, cont, name)
+      apply_cont(cont, name)
     }))
   }
 
@@ -406,7 +404,7 @@ object eval {
         case P(c@Cell(key), _) => (c, cells(key))
       }
       cellSet(lift(c), makePair(makePair(name, cellNew(v, name.sym)), frame))
-      apply_cont(m, env, cont, name)
+      apply_cont(cont, name)
     }))
   }
 
@@ -421,7 +419,7 @@ object eval {
     val e = exp match {
       case P(_, P(e, N)) => e
     }
-    apply_cont(m, env, cont, e)
+    apply_cont(cont, e)
   }
 
   def eval_EM_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
@@ -437,7 +435,7 @@ object eval {
     }
     val MEnv(meta_env, meta_menv) = m
     meta_apply[R](meta_menv, S("base-eval"), e, meta_env, mkCont[R]{v =>
-      apply_cont(m, env, cont, v)
+      apply_cont(cont, v)
     })
   }
 
@@ -556,7 +554,7 @@ object eval {
       if (need_paren2) (true, s1+" "+s2)
       else (true, s1+" . "+s2)
     case Prim(p) => (false, p)
-    case Clo(params, body, env) => (false, "<lambda>")
+    case Clo(params, body, env, m) => (false, "<lambda>")
     case Evalfun(i) => (false, "<evalfun"+i+">")
     case Cont(i) => (false, "<cont"+i+">")
     case Cell(key) => pp(cells(key))

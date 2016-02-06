@@ -15,15 +15,15 @@ class staged$0 extends Fun[NoRep] with (Value => Value) {
         implicit def convert_ev_1(x: R[Value]): R1[Value] = ev_1.convert(x)
         val x5 = o1.cellRead(x2)
         val x6 = o1.makePair(x5, o1.lift(P(I(1), N)))
-        val x23 = o1.app(MEnv(0), o1.lift(Prim("+")), x6, P(N, P(P(P(S("c"), Code(x2)), N), P(Cell("global"), N))), mkCont[R1]{(x7: R1[Value]) =>
+        val x23 = o1.app(o1.lift(Prim("+")), x6, mkCont[R1]{(x7: R1[Value]) =>
           val x8 = o1.cellSet(x2, x7)
           val x9 = o1.cellRead(x2)
           val x10 = o1.makePair(x9, o1.lift(P(I(1), N)))
-          val x21 = o1.app(MEnv(0), o1.lift(Prim("+")), x10, P(N, P(P(P(S("c"), Code(x2)), N), P(Cell("global"), N))), mkCont[R1]{(x11: R1[Value]) =>
+          val x21 = o1.app(o1.lift(Prim("+")), x10, mkCont[R1]{(x11: R1[Value]) =>
             val x12 = o1.cellSet(x2, x11)
             val x13 = o1.cellRead(x2)
             val x14 = o1.makePair(x13, o1.lift(P(I(1), N)))
-            val x19 = o1.app(MEnv(0), o1.lift(Prim("+")), x14, P(N, P(P(P(S("c"), Code(x2)), N), P(Cell("global"), N))), mkCont[R1]{(x15: R1[Value]) =>
+            val x19 = o1.app(o1.lift(Prim("+")), x14, mkCont[R1]{(x15: R1[Value]) =>
               val x16 = o1.cellSet(x2, x15)
               val x17 = o1.cellRead(x2)
               x17: R1[Value]

@@ -24,7 +24,7 @@ class staged$0 extends Fun[NoRep] with (Value => Value) {
             val x10 = x9
             val x12 = x9
             val x13 = o2.makePair(x12, o2.lift(P(I(0), N)))
-            val x39 = o2.app(MEnv(0), o2.lift(Prim("<")), x13, P(P(P(S("a"), Code(x10)), N), P(P(P(S("sumf"), Code(x6)), N), P(P(P(S("f"), Code(x2)), N), P(Cell("global"), N)))), mkCont[R2]{(x14: R2[Value]) =>
+            val x39 = o2.app(o2.lift(Prim("<")), x13, mkCont[R2]{(x14: R2[Value]) =>
               val x15 = o2.isTrue(x14)
               val x37 = o2.ifThenElse((x15), {
                 o2.lift(I(0))
@@ -32,16 +32,16 @@ class staged$0 extends Fun[NoRep] with (Value => Value) {
                 val x16 = x1
                 val x17 = x9
                 val x18 = o2.makePair(x17, o2.lift(N))
-                val x35 = o2.app(MEnv(0), x16, x18, P(P(P(S("a"), Code(x10)), N), P(P(P(S("sumf"), Code(x6)), N), P(P(P(S("f"), Code(x2)), N), P(Cell("global"), N)))), mkCont[R2]{(x19: R2[Value]) =>
+                val x35 = o2.app(x16, x18, mkCont[R2]{(x19: R2[Value]) =>
                   val x20 = x5
                   val x21 = x9
                   val x22 = o2.makePair(x21, o2.lift(P(I(1), N)))
-                  val x33 = o2.app(MEnv(0), o2.lift(Prim("-")), x22, P(P(P(S("a"), Code(x10)), N), P(P(P(S("sumf"), Code(x6)), N), P(P(P(S("f"), Code(x2)), N), P(Cell("global"), N)))), mkCont[R2]{(x23: R2[Value]) =>
+                  val x33 = o2.app(o2.lift(Prim("-")), x22, mkCont[R2]{(x23: R2[Value]) =>
                     val x24 = o2.makePair(x23, o2.lift(N))
-                    val x31 = o2.app(MEnv(0), x20, x24, P(P(P(S("a"), Code(x10)), N), P(P(P(S("sumf"), Code(x6)), N), P(P(P(S("f"), Code(x2)), N), P(Cell("global"), N)))), mkCont[R2]{(x25: R2[Value]) =>
+                    val x31 = o2.app(x20, x24, mkCont[R2]{(x25: R2[Value]) =>
                       val x26 = o2.makePair(x25, o2.lift(N))
                       val x27 = o2.makePair(x19, x26)
-                      val x29 = o2.app(MEnv(0), o2.lift(Prim("+")), x27, P(P(P(S("a"), Code(x10)), N), P(P(P(S("sumf"), Code(x6)), N), P(P(P(S("f"), Code(x2)), N), P(Cell("global"), N)))), mkCont[R2]{(x28: R2[Value]) =>
+                      val x29 = o2.app(o2.lift(Prim("+")), x27, mkCont[R2]{(x28: R2[Value]) =>
                         x28: R2[Value]
                       })
                       x29: R2[Value]
