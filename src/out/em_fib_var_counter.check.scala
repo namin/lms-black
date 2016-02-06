@@ -12,7 +12,7 @@ class staged$0 extends Fun[NoRep] with (Value => Value) {
     val x2 = x1
     val x5 = o.cellRead(o.lift(Cell("counter")))
     val x6 = o.makePair(x5, o.lift(P(I(1), N)))
-    val x8 = o.app(MEnv(1), o.lift(Prim("+")), x6, P(P(P(S("e"), Code(S("n"))), P(P(S("r"), Code(P(P(P(S("n"), Code(x2)), N), P(Cell("global"), N)))), P(P(S("k"), Code(Cont(120))), N))), P(Cell("global1"), N)), mkCont[R]{(x7: R[Value]) =>
+    val x8 = o.app(MEnv(1), o.lift(Prim("+")), x6, P(P(P(S("e"), Code(S("n"))), P(P(S("r"), Code(P(P(P(S("n"), Code(x2)), N), P(Cell("global"), N)))), P(P(S("k"), Code(Cont(145))), N))), P(Cell("global1"), N)), mkCont[R]{(x7: R[Value]) =>
       x7: R[Value]
     })
     val x9 = o.cellSet(o.lift(Cell("counter")), x8)
@@ -25,7 +25,7 @@ class staged$0 extends Fun[NoRep] with (Value => Value) {
     val x62 = o.ifThenElse((x15), {
       val x16 = o.cellRead(o.lift(Cell("counter")))
       val x17 = o.makePair(x16, o.lift(P(I(1), N)))
-      val x19 = o.app(MEnv(1), o.lift(Prim("+")), x17, P(P(P(S("e"), Code(S("n"))), P(P(S("r"), Code(P(P(P(S("n"), Code(x2)), N), P(Cell("global"), N)))), P(P(S("k"), Code(Cont(131))), N))), P(Cell("global1"), N)), mkCont[R]{(x18: R[Value]) =>
+      val x19 = o.app(MEnv(1), o.lift(Prim("+")), x17, P(P(P(S("e"), Code(S("n"))), P(P(S("r"), Code(P(P(P(S("n"), Code(x2)), N), P(Cell("global"), N)))), P(P(S("k"), Code(Cont(156))), N))), P(Cell("global1"), N)), mkCont[R]{(x18: R[Value]) =>
         x18: R[Value]
       })
       val x20 = o.cellSet(o.lift(Cell("counter")), x19)
@@ -35,7 +35,7 @@ class staged$0 extends Fun[NoRep] with (Value => Value) {
       val x26 = o.cellRead(o.lift(Cell("fib")))
       val x28 = o.cellRead(o.lift(Cell("counter")))
       val x29 = o.makePair(x28, o.lift(P(I(1), N)))
-      val x31 = o.app(MEnv(1), o.lift(Prim("+")), x29, P(P(P(S("e"), Code(S("n"))), P(P(S("r"), Code(P(P(P(S("n"), Code(x2)), N), P(Cell("global"), N)))), P(P(S("k"), Code(Cont(166))), N))), P(Cell("global1"), N)), mkCont[R]{(x30: R[Value]) =>
+      val x31 = o.app(MEnv(1), o.lift(Prim("+")), x29, P(P(P(S("e"), Code(S("n"))), P(P(S("r"), Code(P(P(P(S("n"), Code(x2)), N), P(Cell("global"), N)))), P(P(S("k"), Code(Cont(191))), N))), P(Cell("global1"), N)), mkCont[R]{(x30: R[Value]) =>
         x30: R[Value]
       })
       val x32 = o.cellSet(o.lift(Cell("counter")), x31)
@@ -51,7 +51,7 @@ class staged$0 extends Fun[NoRep] with (Value => Value) {
       val x42 = o.cellRead(o.lift(Cell("fib")))
       val x44 = o.cellRead(o.lift(Cell("counter")))
       val x45 = o.makePair(x44, o.lift(P(I(1), N)))
-      val x47 = o.app(MEnv(1), o.lift(Prim("+")), x45, P(P(P(S("e"), Code(S("n"))), P(P(S("r"), Code(P(P(P(S("n"), Code(x2)), N), P(Cell("global"), N)))), P(P(S("k"), Code(Cont(202))), N))), P(Cell("global1"), N)), mkCont[R]{(x46: R[Value]) =>
+      val x47 = o.app(MEnv(1), o.lift(Prim("+")), x45, P(P(P(S("e"), Code(S("n"))), P(P(S("r"), Code(P(P(P(S("n"), Code(x2)), N), P(Cell("global"), N)))), P(P(S("k"), Code(Cont(227))), N))), P(Cell("global1"), N)), mkCont[R]{(x46: R[Value]) =>
         x46: R[Value]
       })
       val x48 = o.cellSet(o.lift(Cell("counter")), x47)
