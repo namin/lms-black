@@ -236,6 +236,7 @@ trait EvalDslImpl extends EvalDslExp { q =>
 
     override def emitFileHeader() {
       stream.println("import language.higherKinds")
+      stream.println("import language.implicitConversions")
       stream.println("import scala.lms.black.eval._")
     }
 
