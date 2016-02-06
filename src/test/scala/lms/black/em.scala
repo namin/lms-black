@@ -69,6 +69,16 @@ class TestEM extends TestSuite with BeforeAndAfter {
     assertResult(I(1)){ev("(id 0)")}
   }
 
+  test("user dropping continuations") {
+    ev("(EM (define original-eval-var eval-var))")
+    ev("(EM (set! eval-var (lambda (exp env k) (original-eval-var exp env (lambda (v) (if (eq? v 0) 'done (k v)))))))")
+    ev("(define x 0)")
+    ev("(define y 1)")
+    assertResult(I(1)){ev("y")}
+    assertResult(S("done")){ev("x")}
+    assertResult(S("done")){ev("(+ x y)")}
+  }
+
   test("code generation for fib under var counter") {
     ev("(EM (define counter 0))")
     ev("(EM (define old-eval-var eval-var))")
