@@ -190,7 +190,7 @@ object eval {
       case v@Cell(_) => cell_read(v)
     }
     val cont_id = mkCont[R]{v => v}
-    val (arg_cont, meta_cont) = if (inRep) (cont_id, cont) else
+    val (arg_cont, meta_cont) = //if (inRep) (cont_id, cont) else
       (mkCont[R]{v => apply_cont[R](meta_menv, meta_env, cont, v)}, cont_id)
     val args = P(exp, P(env, P(arg_cont, N)))
     static_apply[R](meta_menv, fun, args, meta_env, meta_cont)
