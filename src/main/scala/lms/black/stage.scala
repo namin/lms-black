@@ -6,30 +6,30 @@ import scala.lms.common._
 trait EvalDsl extends IfThenElse with LiftBoolean {
   implicit def valTyp: Typ[Value]
   implicit def boolTyp: Typ[Boolean]
-  def base_apply_rep(f: Rep[Value], args: Rep[Value], cont: Value): Rep[Value]
-  def make_fun_rep(f: Fun[Rep]): Rep[Value]
-  def if_then_else_rep[A:Typ](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A]
-  def get_car_rep(p: Rep[Value]): Rep[Value]
-  def get_cdr_rep(p: Rep[Value]): Rep[Value]
-  def make_pair_rep(car: Rep[Value], cdr: Rep[Value]): Rep[Value]
-  def is_true_rep(cond: Rep[Value]): Rep[Boolean]
+  def app_rep(f: Rep[Value], args: Rep[Value], cont: Value): Rep[Value]
+  def fun_rep(f: Fun[Rep]): Rep[Value]
+  def if_rep[A:Typ](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A]
+  def car_rep(p: Rep[Value]): Rep[Value]
+  def cdr_rep(p: Rep[Value]): Rep[Value]
+  def cons_rep(car: Rep[Value], cdr: Rep[Value]): Rep[Value]
+  def true_rep(cond: Rep[Value]): Rep[Boolean]
   def cell_new_rep(v: Rep[Value], s: String): Rep[Value]
   def cell_read_rep(c: Rep[Value]): Rep[Value]
   def cell_set_rep(c: Rep[Value], v: Rep[Value]): Rep[Value]
   implicit object OpsRep extends scala.Serializable with Ops[Rep] {
     type Tag[A] = Typ[A]
     def valueTag = typ[Value]
-    def lift(v: Value) = unit(v)
-    def app(f: Rep[Value], args: Rep[Value], cont: Value) = base_apply_rep(f, args, cont)
-    def isTrue(v: Rep[Value]): Rep[Boolean] = is_true_rep(v)
-    def ifThenElse[A:Tag](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A] = if_then_else_rep(cond, thenp, elsep)
-    def makeFun(f: Fun[Rep]) = make_fun_rep(f)
-    def makePair(car: Rep[Value], cdr: Rep[Value]) = make_pair_rep(car, cdr)
-    def getCar(p: Rep[Value]) = get_car_rep(p)
-    def getCdr(p: Rep[Value]) = get_cdr_rep(p)
-    def cellNew(v: Rep[Value], s: String) = cell_new_rep(v, s)
-    def cellRead(c: Rep[Value]) = cell_read_rep(c)
-    def cellSet(c: Rep[Value], v: Rep[Value]) = cell_set_rep(c, v)
+    def _lift(v: Value) = unit(v)
+    def _app(f: Rep[Value], args: Rep[Value], cont: Value) = app_rep(f, args, cont)
+    def _true(v: Rep[Value]): Rep[Boolean] = true_rep(v)
+    def _if[A:Tag](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A] = if_rep(cond, thenp, elsep)
+    def _fun(f: Fun[Rep]) = fun_rep(f)
+    def _cons(car: Rep[Value], cdr: Rep[Value]) = cons_rep(car, cdr)
+    def _car(p: Rep[Value]) = car_rep(p)
+    def _cdr(p: Rep[Value]) = cdr_rep(p)
+    def _cell_new(v: Rep[Value], s: String) = cell_new_rep(v, s)
+    def _cell_read(c: Rep[Value]) = cell_read_rep(c)
+    def _cell_set(c: Rep[Value], v: Rep[Value]) = cell_set_rep(c, v)
     def inRep = true
   }
 
@@ -43,20 +43,20 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
 
   case class CarRep(p: Rep[Value]) extends Def[Value]
   case class CdrRep(p: Rep[Value]) extends Def[Value]
-  case class MakePairRep(car: Rep[Value], cdr: Rep[Value]) extends Def[Value]
-  case class IsTrueRep(cond: Rep[Value]) extends Def[Boolean]
+  case class ConsRep(car: Rep[Value], cdr: Rep[Value]) extends Def[Value]
+  case class TrueRep(cond: Rep[Value]) extends Def[Boolean]
   case class CellReadRep(c: Rep[Value]) extends Def[Value]
   case class CellSetRep(c: Rep[Value], v: Rep[Value]) extends Def[Value]
   case class CellNewRep(v: Rep[Value], s: String) extends Def[Value]
 
-  def make_pair_rep(car: Rep[Value], cdr: Rep[Value]) = (car, cdr) match {
+  def cons_rep(car: Rep[Value], cdr: Rep[Value]) = (car, cdr) match {
     case (Const(a), Const(b)) => Const[Value](P(a, b))
-    case _ => MakePairRep(car, cdr)
+    case _ => ConsRep(car, cdr)
   }
 
-  def is_true_rep(cond: Rep[Value]) = cond match {
+  def true_rep(cond: Rep[Value]) = cond match {
     case Const(B(b)) => Const(b)
-    case _ => IsTrueRep(cond)
+    case _ => TrueRep(cond)
   }
 
   var cell_es = Map[Rep[Value], Rep[Value]]()
@@ -75,16 +75,16 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
     reflectEffect(CellSetRep(c, v))
   }
 
-  def get_car_rep(p: Rep[Value]) = p match {
+  def car_rep(p: Rep[Value]) = p match {
     case Const(P(a, b)) => Const(a)
     case _ => CarRep(p)
   }
-  def get_cdr_rep(p: Rep[Value]) = p match {
+  def cdr_rep(p: Rep[Value]) = p match {
     case Const(P(a, b)) => Const(b)
     case _ => CdrRep(p)
   }
 
-  def if_then_else_rep[A:Typ](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]) = cond match {
+  def if_rep[A:Typ](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]) = cond match {
     case Const(true) => thenp
     case Const(false) => elsep
     case _ => if (cond) thenp else elsep
@@ -98,8 +98,8 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
   }
 
   var omit_reads = Set[Rep[Value]]()
-  case class BaseApplyRep(f: Rep[Value], args: Rep[Value], cont_x: Sym[Value], cont_y: Block[Value]) extends Def[Value]
-  def base_apply_rep(f: Rep[Value], args: Rep[Value], cont: Value): Rep[Value] = (f, args, cont) match {
+  case class AppRep(f: Rep[Value], args: Rep[Value], cont_x: Sym[Value], cont_y: Block[Value]) extends Def[Value]
+  def app_rep(f: Rep[Value], args: Rep[Value], cont: Value): Rep[Value] = (f, args, cont) match {
     case (Const(fprim@Prim(p)), Const(vs@P(_, _)), Cont(key)) if !effectful_primitives.contains(fprim) && !hasCode(vs) =>
       val r = apply_primitive(p, vs)
       val fn = conts(key).fun[Rep]
@@ -116,7 +116,7 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
       val r = efn(vs)
       val fn = conts(key).fun[Rep]
       fn(r)
-    case (Const(fcont@Cont(_)), Def(MakePairRep(a, Const(N))), _) =>
+    case (Const(fcont@Cont(_)), Def(ConsRep(a, Const(N))), _) =>
       apply_cont[Rep](fcont, a)
     case (_, _, Cont(key)) =>
       //println("//DEBUG "+f+" applied to "+args)
@@ -125,11 +125,11 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
         val fn = conts(key).fun[Rep]
         fn(x)
       }
-      reflectEffect(BaseApplyRep(f, args, x, y))
+      reflectEffect(AppRep(f, args, x, y))
   }
 
   case class EvalfunRep(x: Sym[Value], y: Block[Value]) extends Def[Value]
-  def make_fun_rep(f: Fun[Rep]) = {
+  def fun_rep(f: Fun[Rep]) = {
     val x = fresh[Value]
     val y = reifyEffects{
       val fn = f.fun[Rep]
@@ -139,7 +139,7 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
   }
 
   override def boundSyms(e: Any): List[Sym[Any]] = e match {
-    case BaseApplyRep(f, a, x, y) => syms(x) ::: effectSyms(y)
+    case AppRep(f, a, x, y) => syms(x) ::: effectSyms(y)
     case EvalfunRep(x, y) => syms(x) ::: effectSyms(y)
     case _ => super.boundSyms(e)
   }
@@ -160,7 +160,7 @@ trait EvalDslGen extends ScalaGenIfThenElse {
 
   def quoteL(x: Exp[Any]) : String = x match {
     case Const(Code(e: Exp[Any])) => quote(e)
-    case Const(v: Value) => quoteO+".lift("+quote(x)+")"
+    case Const(v: Value) => quoteO+"._lift("+quote(x)+")"
     case _ => quote(x)
   }
   def quoteInP(x: Value) : String = x match {
@@ -174,22 +174,22 @@ trait EvalDslGen extends ScalaGenIfThenElse {
     case _ => super.quote(x)
   }
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
-    case CarRep(p) => emitValDef(sym, quoteO+".getCar("+quoteL(p)+")")
-    case CdrRep(p) => emitValDef(sym, quoteO+".getCdr("+quoteL(p)+")")
-    case IsTrueRep(cond) => emitValDef(sym, quoteO+".isTrue("+quoteL(cond)+")")
-    case CellSetRep(c, v) => emitValDef(sym, quoteO+".cellSet("+quoteL(c)+", "+quoteL(v)+")")
-    case MakePairRep(a, b) => emitValDef(sym, quoteO+".makePair("+quoteL(a)+", "+quoteL(b)+")")
+    case CarRep(p) => emitValDef(sym, quoteO+"._car("+quoteL(p)+")")
+    case CdrRep(p) => emitValDef(sym, quoteO+"._cdr("+quoteL(p)+")")
+    case TrueRep(cond) => emitValDef(sym, quoteO+"._true("+quoteL(cond)+")")
+    case CellSetRep(c, v) => emitValDef(sym, quoteO+"._cell_set("+quoteL(c)+", "+quoteL(v)+")")
+    case ConsRep(a, b) => emitValDef(sym, quoteO+"._cons("+quoteL(a)+", "+quoteL(b)+")")
     case CellReadRep(c) => if (!omit_reads.contains(sym.asInstanceOf[Exp[Value]]))
       emitValDef(sym, cell_es.get(c) match {
       case Some(v) => quoteL(v)
-      case None => quoteO+".cellRead("+quoteL(c)+")"
+      case None => quoteO+"._cell_read("+quoteL(c)+")"
     })
     case CellNewRep(v, s) => emitValDef(sym, cell_es.get(sym.asInstanceOf[Exp[Value]]) match {
       case Some(_) => quoteL(v)
-      case None => quoteO+".cellNew("+quoteL(v)+", "+quote(Const(s))+")"
+      case None => quoteO+"._cell_new("+quoteL(v)+", "+quote(Const(s))+")"
     })
-    case BaseApplyRep(f, args, cont_x, cont_y) =>
-      emitValDef(sym, quoteO+".app("+quoteL(f)+", "+quoteL(args)+", mkCont["+quoteR+"]{("+quote(cont_x)+": "+quoteR+"[Value]) =>")
+    case AppRep(f, args, cont_x, cont_y) =>
+      emitValDef(sym, quoteO+"._app("+quoteL(f)+", "+quoteL(args)+", mkCont["+quoteR+"]{("+quote(cont_x)+": "+quoteR+"[Value]) =>")
       emitBlock(cont_y)
       stream.println(quoteL(getBlockResult(cont_y)) + ": "+quoteR+"[Value]")
       stream.println("})")
@@ -199,7 +199,7 @@ trait EvalDslGen extends ScalaGenIfThenElse {
       val a = rs.size.toString
       rs = a::rs
       val r2 = quoteR
-      emitValDef(sym, oldO+".makeFun(new Fun["+r1+"] { def fun["+r2+"[_]:Ops](implicit "+quoteEv+": Convert["+r1+","+r2+"]) = {(" + quote(x) + ": "+r1+"[Value]) => ")
+      emitValDef(sym, oldO+"._fun(new Fun["+r1+"] { def fun["+r2+"[_]:Ops](implicit "+quoteEv+": Convert["+r1+","+r2+"]) = {(" + quote(x) + ": "+r1+"[Value]) => ")
       stream.println("val "+quoteO+" = implicitly[Ops["+r2+"]]")
       stream.println("implicit def convert_"+quoteEv+"(x: "+r1+"[Value]): "+r2+"[Value] = "+quoteEv+".convert(x)")
       if (!rs.tail.isEmpty) {
@@ -213,7 +213,7 @@ trait EvalDslGen extends ScalaGenIfThenElse {
       rs = rs.tail
       stream.println("}})")
     case IfThenElse(c,a,b) =>
-      stream.println("val " + quote(sym) + " = "+quoteO+".ifThenElse((" + quoteL(c) + "), {")
+      stream.println("val " + quote(sym) + " = "+quoteO+"._if((" + quoteL(c) + "), {")
       emitBlock(a)
       stream.println(quoteL(getBlockResult(a)))
       stream.println("}, {")
