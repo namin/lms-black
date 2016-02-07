@@ -79,6 +79,30 @@ class TestEM extends TestSuite with BeforeAndAfter {
     assertResult(S("done")){ev("(+ x y)")}
   }
 
+  test("user capturing continuations") {
+    ev("(EM (define original-eval-var eval-var))")
+    ev("(EM (define cont '()))")
+    ev("(define x 0)")
+    def go() = {
+      assertResult(I(1)){ev("(+ 1 x)")}
+      assertResult(I(2)){ev("((EM cont) 1)")}
+      assertResult(I(4)){ev("((clambda (x) (+ 2 x)) 2)")}
+      assertResult(I(3)){ev("((EM cont) 1)")}
+      assertResult(I(5)){ev("((lambda (x) (+ 3 x)) 2)")}
+      assertResult(I(4)){ev("((EM cont) 1)")}
+    }
+    ev("(EM (set! eval-var (clambda (e r k) (set! cont k) (original-eval-var e r k))))")
+    go()
+    ev("(EM (set! eval-var (lambda (e r k) (set! cont k) (original-eval-var e r k))))")
+    go()
+  }
+
+  test("regression: meta-closure in compiled program") {
+    ev("(EM (define original-eval-var eval-var))")
+    ev("(EM (set! eval-var (lambda (e r k) (original-eval-var e r k))))")
+    assertResult(I(1)){ev("((clambda (x) x) 1)")}
+  }
+
   test("code generation for fib under var counter") {
     ev("(EM (define counter 0))")
     ev("(EM (define old-eval-var eval-var))")

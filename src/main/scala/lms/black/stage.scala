@@ -8,6 +8,7 @@ trait EvalDsl extends IfThenElse with LiftBoolean {
   implicit def boolTyp: Typ[Boolean]
   def app_rep(f: Rep[Value], args: Rep[Value], cont: Value): Rep[Value]
   def fun_rep(f: Fun[Rep]): Rep[Value]
+  def cont_rep(c: CodeCont[Rep], k: FunC[Rep]): Rep[Value]
   def if_rep[A:Typ](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A]
   def car_rep(p: Rep[Value]): Rep[Value]
   def cdr_rep(p: Rep[Value]): Rep[Value]
@@ -19,12 +20,19 @@ trait EvalDsl extends IfThenElse with LiftBoolean {
   implicit object OpsRep extends scala.Serializable with Ops[Rep] {
     type Tag[A] = Typ[A]
     def valueTag = typ[Value]
-    def _lift(v: Value) = unit(v)
+    def _lift(v: Value) = v match {
+      case k@CodeCont(_, _) => k.asInstanceOf[CodeCont[Rep]].force
+      case _ => unit(v)
+    }
     def _unlift(v: Rep[Value]) = Code(v)
     def _app(f: Rep[Value], args: Rep[Value], cont: Value) = app_rep(f, args, cont)
     def _true(v: Rep[Value]): Rep[Boolean] = true_rep(v)
     def _if[A:Tag](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A] = if_rep(cond, thenp, elsep)
     def _fun(f: Fun[Rep]) = fun_rep(f)
+    def _cont(f: FunC[Rep]) = {
+      lazy val k: CodeCont[Rep] = CodeCont[Rep](f, () => cont_rep(k, f))
+      k
+    }
     def _cons(car: Rep[Value], cdr: Rep[Value]) = cons_rep(car, cdr)
     def _car(p: Rep[Value]) = car_rep(p)
     def _cdr(p: Rep[Value]) = cdr_rep(p)
@@ -52,6 +60,7 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
 
   def cons_rep(car: Rep[Value], cdr: Rep[Value]) = (car, cdr) match {
     case (Const(a), Const(b)) => Const[Value](P(a, b))
+    case (Def(ContRep(c, _, _, _)), Const(N)) => Const[Value](P(c, N))
     case _ => ConsRep(car, cdr)
   }
 
@@ -77,11 +86,11 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
   }
 
   def car_rep(p: Rep[Value]) = p match {
-    case Const(P(a, b)) => Const(a)
+    case Const(P(a, b)) => OpsRep._lift(a)
     case _ => CarRep(p)
   }
   def cdr_rep(p: Rep[Value]) = p match {
-    case Const(P(a, b)) => Const(b)
+    case Const(P(a, b)) => OpsRep._lift(b)
     case _ => CdrRep(p)
   }
 
@@ -98,32 +107,44 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
     case _ => false
   }
 
+  case class ContRep(c: CodeCont[Rep], k: FunC[Rep], x: Sym[Value], y: Block[Value]) extends Def[Value]
+  def cont_rep(c: CodeCont[Rep], k: FunC[Rep]): Rep[Value] = {
+    val x = fresh[Value]
+    val y = reifyEffects{
+      val fn = k.fun[Rep]
+      fn(x)
+    }
+    ContRep(c, k, x, y)
+  }
+
   var omit_reads = Set[Rep[Value]]()
   case class AppRep(f: Rep[Value], args: Rep[Value], cont_x: Sym[Value], cont_y: Block[Value]) extends Def[Value]
-  def app_rep(f: Rep[Value], args: Rep[Value], cont: Value): Rep[Value] = (f, args, cont) match {
-    case (Const(fprim@Prim(p)), Const(vs@P(_, _)), Cont(key)) if !effectful_primitives.contains(fprim) && !hasCode(vs) =>
+
+  def app_rep(f: Rep[Value], args: Rep[Value], cont: Value): Rep[Value] = (f, args) match {
+    case (Const(fprim@Prim(p)), Const(vs@P(_, _))) if !effectful_primitives.contains(fprim) && !hasCode(vs) =>
       val r = apply_primitive(p, vs)
-      val fn = conts(key).fun[Rep]
-      fn(Const(r))
-    case (Def(Reflect(CellReadRep(Const(Cell(cid))), _, _)), Const(vs@P(a, P(_, P(_, N)))), Cont(key)) if !hasCode(a) =>
+      apply_cont[Rep](cont, OpsRep._lift(r))
+    case (Def(Reflect(CellReadRep(Const(Cell(cid))), _, _)), Const(vs@P(a, P(_, P(_, N))))) if !hasCode(a) =>
       omit_reads += f
       val Evalfun(ekey) = cells(cid)
       val efn = funs(ekey).fun[Rep]
       val r = efn(vs)
-      val fn = conts(key).fun[Rep]
-      fn(r)
-    case (Const(Evalfun(ekey)), Const(vs@P(a, P(_, P(_, N)))), Cont(key)) if !hasCode(a) =>
+      apply_cont[Rep](cont, r)
+    case (Const(Evalfun(ekey)), Const(vs@P(a, P(_, P(_, N))))) if !hasCode(a) =>
       val efn = funs(ekey).fun[Rep]
       val r = efn(vs)
-      val fn = conts(key).fun[Rep]
-      fn(r)
-    case (Const(fcont@Cont(_)), Def(ConsRep(a, Const(N))), _) =>
-      apply_cont[Rep](fcont, a)
-    case (_, _, Cont(key)) =>
+      apply_cont[Rep](cont, r)
+    case (Def(ContRep(_, k, _, _)), Def(ConsRep(a, Const(N)))) =>
+      val fn = k.fun[Rep]
+      val r = fn(a)
+      apply_cont[Rep](cont, r)
+    case (Const(fcont), Def(ConsRep(a, Const(N)))) if isCont(fcont) =>
+      apply_cont[Rep](cont, apply_cont[Rep](fcont, a))
+    case (_, _) =>
       //println("//DEBUG "+f+" applied to "+args)
       val x = fresh[Value]
       val y = reifyEffects{
-        val fn = conts(key).fun[Rep]
+        val Some(fn) = cont2fun[Rep](cont)
         fn(x)
       }
       reflectEffect(AppRep(f, args, x, y))
@@ -142,6 +163,7 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
   override def boundSyms(e: Any): List[Sym[Any]] = e match {
     case AppRep(f, a, x, y) => syms(x) ::: effectSyms(y)
     case EvalfunRep(x, y) => syms(x) ::: effectSyms(y)
+    case ContRep(_, _, x, y) => syms(x) ::: effectSyms(y)
     case _ => super.boundSyms(e)
   }
 }
@@ -165,7 +187,7 @@ trait EvalDslGen extends ScalaGenIfThenElse {
     case _ => quote(x)
   }
   def quoteInP(x: Value) : String = x match {
-    case Code(_) => "Code("+quote(Const(x))+")"
+    case Code(_) => quoteO+"._unlift("+quote(Const(x))+")"
     case _ => quote(Const(x))
   }
   override def quote(x: Exp[Any]) : String = x match {
@@ -173,6 +195,27 @@ trait EvalDslGen extends ScalaGenIfThenElse {
     case Const(Code(c)) => if (c.isInstanceOf[Rep[Any]]) quote(c.asInstanceOf[Rep[Any]]) else quote(Const(c.asInstanceOf[Value]))
     case Const(Clo(param, body, env, m)) =>  "Clo("+quote(Const(param))+", "+quote(Const(body))+", "+quote(Const(env))+", "+m.toString+")"
     case _ => super.quote(x)
+  }
+  def print_cont(x: Sym[Value], y: Block[Value]) = {
+    val r1 = quoteR
+    val oldO = quoteO
+    val a = rs.size.toString
+    rs = a::rs
+    val r2 = quoteR
+    stream.println(oldO+"._cont(new FunC["+r1+"] { def fun["+r2+"[_]:Ops](implicit "+quoteEv+": Convert["+r1+","+r2+"]) = {(" + quote(x) + ": "+r2+"[Value]) => ")
+    stream.println("val "+quoteO+" = implicitly[Ops["+r2+"]]")
+    stream.println("implicit def convert_"+quoteEv+"(x: "+r1+"[Value]): "+r2+"[Value] = "+quoteEv+".convert(x)")
+    if (!rs.tail.isEmpty && getBlockResult(y)!=x) {
+      for ((b, c) <- rs.tail.zip(rs.tail.tail)) {
+        stream.print("val "+quote_Ev(a, c)+": Convert["+quote_R(c)+","+quote_R(a)+"] = convertTrans["+quote_R(c)+","+quote_R(b)+","+quote_R(a)+"]("+quote_Ev(b, c)+", "+quote_Ev(a, b)+"); ")
+        stream.print("implicit def convert_"+quote_Ev(a, c)+"(x: "+quote_R(c)+"[Value]): "+quote_R(a)+"[Value] = "+quote_Ev(a, c)+".convert(x); ")
+      }
+      stream.println("")
+    }
+    emitBlock(y)
+    stream.println(quoteL(getBlockResult(y)) + ": "+r2+"[Value]")
+    rs = rs.tail
+    stream.println("}})")
   }
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case CarRep(p) => emitValDef(sym, quoteO+"._car("+quoteL(p)+")")
@@ -189,11 +232,10 @@ trait EvalDslGen extends ScalaGenIfThenElse {
       case Some(_) => quoteL(v)
       case None => quoteO+"._cell_new("+quoteL(v)+", "+quote(Const(s))+")"
     })
-    case AppRep(f, args, cont_x, cont_y) =>
-      emitValDef(sym, quoteO+"._app("+quoteL(f)+", "+quoteL(args)+", mkCont["+quoteR+"]{("+quote(cont_x)+": "+quoteR+"[Value]) =>")
-      emitBlock(cont_y)
-      stream.println(quoteL(getBlockResult(cont_y)) + ": "+quoteR+"[Value]")
-      stream.println("})")
+    case AppRep(f, args, x, y) =>
+      emitValDef(sym, quoteO+"._app("+quoteL(f)+", "+quoteL(args)+", ")
+      print_cont(x, y)
+      stream.println(")")
     case EvalfunRep(x, y) =>
       val r1 = quoteR
       val oldO = quoteO
@@ -205,14 +247,19 @@ trait EvalDslGen extends ScalaGenIfThenElse {
       stream.println("implicit def convert_"+quoteEv+"(x: "+r1+"[Value]): "+r2+"[Value] = "+quoteEv+".convert(x)")
       if (!rs.tail.isEmpty) {
         for ((b, c) <- rs.tail.zip(rs.tail.tail)) {
-          stream.println("val "+quote_Ev(a, c)+": Convert["+quote_R(c)+","+quote_R(a)+"] = convertTrans["+quote_R(c)+","+quote_R(b)+","+quote_R(a)+"]("+quote_Ev(b, c)+", "+quote_Ev(a, b)+")")
-          stream.println("implicit def convert_"+quote_Ev(a, c)+"(x: "+quote_R(c)+"[Value]): "+quote_R(a)+"[Value] = "+quote_Ev(a, c)+".convert(x)")
+          stream.print("val "+quote_Ev(a, c)+": Convert["+quote_R(c)+","+quote_R(a)+"] = convertTrans["+quote_R(c)+","+quote_R(b)+","+quote_R(a)+"]("+quote_Ev(b, c)+", "+quote_Ev(a, b)+"); ")
+          stream.print("implicit def convert_"+quote_Ev(a, c)+"(x: "+quote_R(c)+"[Value]): "+quote_R(a)+"[Value] = "+quote_Ev(a, c)+".convert(x); ")
         }
+        stream.println("")
       }
       emitBlock(y)
       stream.println(quoteL(getBlockResult(y)) + ": "+r2+"[Value]")
       rs = rs.tail
       stream.println("}})")
+    case ContRep(_, _, x, y) =>
+      emitValDef(sym, quoteO+"._lift(")
+      print_cont(x, y)
+      stream.println(")")
     case IfThenElse(c,a,b) =>
       stream.println("val " + quote(sym) + " = "+quoteO+"._if((" + quoteL(c) + "), {")
       emitBlock(a)
