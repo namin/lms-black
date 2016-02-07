@@ -122,7 +122,7 @@ object eval {
     type Tag[A]
     implicit def valueTag: Tag[Value]
     implicit def _lift(v: Value): R[Value]
-    def _unlift(v: R[Value]): Value = if (inRep) Code(v) else v.asInstanceOf[Value]
+    def _unlift(v: R[Value]): Value
     def _app(fun: R[Value], args: R[Value], cont: Value): R[Value]
     def _true(v: R[Value]): R[Boolean]
     def _if[A:Tag](cond: R[Boolean], thenp: => R[A], elsep: => R[A]): R[A]
@@ -140,6 +140,7 @@ object eval {
     type Tag[A] = Unit
     def valueTag = ()
     def _lift(v: Value) = v
+    def _unlift(v: Value) = v
     def _app(fun: Value, args: Value, cont: Value) = static_apply[NoRep](fun, args, cont)
     def _true(v: Value) = v match {
       case B(b) => b

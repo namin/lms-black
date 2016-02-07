@@ -20,6 +20,7 @@ trait EvalDsl extends IfThenElse with LiftBoolean {
     type Tag[A] = Typ[A]
     def valueTag = typ[Value]
     def _lift(v: Value) = unit(v)
+    def _unlift(v: Rep[Value]) = Code(v)
     def _app(f: Rep[Value], args: Rep[Value], cont: Value) = app_rep(f, args, cont)
     def _true(v: Rep[Value]): Rep[Boolean] = true_rep(v)
     def _if[A:Tag](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A] = if_rep(cond, thenp, elsep)
