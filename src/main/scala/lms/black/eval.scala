@@ -122,6 +122,7 @@ object eval {
     type Tag[A]
     implicit def valueTag: Tag[Value]
     implicit def _lift(v: Value): R[Value]
+    def _unlift(v: R[Value]): Value = if (inRep) Code(v) else v.asInstanceOf[Value]
     def _app(fun: R[Value], args: R[Value], cont: Value): R[Value]
     def _true(v: R[Value]): R[Boolean]
     def _if[A:Tag](cond: R[Boolean], thenp: => R[A], elsep: => R[A]): R[A]
@@ -160,9 +161,7 @@ object eval {
       f(v)
     case _ =>
       val o = implicitly[Ops[R]]; import o._
-      static_apply[R](cont,
-        P((if (inRep) Code(v) else v.asInstanceOf[Value]), N),
-        mkCont[R]{v => v})
+      static_apply[R](cont, P(_unlift(v), N), mkCont[R]{v => v})
   }
 
   def static_apply[R[_]:Ops](fun: Value, args: Value, cont: Value) = {
@@ -350,7 +349,7 @@ object eval {
     val args = list_to_value(ps.map{a => car(cdr(a))})
     meta_apply[R](m, S("eval-list"), args, env, mkCont[R]{vs =>
       meta_apply[R](m, S("eval-begin"), body,
-        env_extend[R](env, params, if (inRep) Code(vs) else vs.asInstanceOf[Value]),
+        env_extend[R](env, params, _unlift(vs)),
         cont)
     })
   }
