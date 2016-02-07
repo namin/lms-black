@@ -25,3 +25,5 @@ scalacOptions += "-deprecation"
 scalacOptions += "-feature"
 
 parallelExecution in Test := false
+
+initialCommands in console := "import scala.lms.black._; import repl._; import eval._"
