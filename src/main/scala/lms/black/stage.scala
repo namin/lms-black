@@ -205,8 +205,8 @@ trait EvalDslGen extends ScalaGenIfThenElse {
     val r2 = quoteR
     stream.println(oldO+"._cont(new FunC["+r1+"] { def fun["+r2+"[_]:Ops](implicit "+quoteEv+": Convert["+r1+","+r2+"]) = {(" + quote(x) + ": "+r2+"[Value]) => ")
     if (!rs.tail.isEmpty && getBlockResult(y)!=x) {
-      stream.println("val "+quoteO+" = implicitly[Ops["+r2+"]]")
-      stream.println("implicit def convert_"+quoteEv+"(x: "+r1+"[Value]): "+r2+"[Value] = "+quoteEv+".convert(x)")
+      stream.print("val "+quoteO+" = implicitly[Ops["+r2+"]]; ")
+      stream.print("implicit def convert_"+quoteEv+"(x: "+r1+"[Value]): "+r2+"[Value] = "+quoteEv+".convert(x); ")
       for ((b, c) <- rs.tail.zip(rs.tail.tail)) {
         stream.print("val "+quote_Ev(a, c)+": Convert["+quote_R(c)+","+quote_R(a)+"] = convertTrans["+quote_R(c)+","+quote_R(b)+","+quote_R(a)+"]("+quote_Ev(b, c)+", "+quote_Ev(a, b)+"); ")
         stream.print("implicit def convert_"+quote_Ev(a, c)+"(x: "+quote_R(c)+"[Value]): "+quote_R(a)+"[Value] = "+quote_Ev(a, c)+".convert(x); ")
