@@ -57,7 +57,6 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
 
   def cons_rep(car: Rep[Value], cdr: Rep[Value]) = (car, cdr) match {
     case (Const(a), Const(b)) => Const[Value](P(a, b))
-    case (Def(ContRep(c, _, _, _)), Const(N)) => Const[Value](P(c, N))
     case _ => ConsRep(car, cdr)
   }
 
@@ -130,10 +129,6 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
     case (Const(Evalfun(ekey)), Const(vs@P(a, P(_, P(_, N))))) if !hasCode(a) =>
       val efn = funs(ekey).fun[Rep]
       val r = efn(vs)
-      apply_cont[Rep](cont, r)
-    case (Def(ContRep(_, k, _, _)), Def(ConsRep(a, Const(N)))) =>
-      val fn = k.fun[Rep]
-      val r = fn(a)
       apply_cont[Rep](cont, r)
     case (Const(fcont), Def(ConsRep(a, Const(N)))) if isCont(fcont) =>
       apply_cont[Rep](cont, apply_cont[Rep](fcont, a))
