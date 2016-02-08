@@ -188,6 +188,7 @@ trait EvalDslGen extends ScalaGenIfThenElse {
   }
   def quoteInP(x: Value) : String = x match {
     case Code(_) => quoteO+"._unlift("+quote(Const(x))+")"
+    case c@CodeCont(_, _) =>  quoteO+"._unlift("+quote(c.asInstanceOf[CodeCont[Rep]].force)+")"
     case _ => quote(Const(x))
   }
   override def quote(x: Exp[Any]) : String = x match {
