@@ -166,6 +166,25 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
     case ContRep(_, _, x, y) => syms(x) ::: effectSyms(y)
     case _ => super.boundSyms(e)
   }
+
+  override def syms(e: Any): List[Sym[Any]] = e match {
+    case Code(v) => syms(v)
+    case c@CodeCont(_, _) => syms(c.force)
+    case AppRep(f, a, x, y) => syms(f) ::: syms(a) ::: syms(y)
+    case EvalfunRep(x, y) => syms(y)
+    case ContRep(_, _, x, y) => syms(y)
+    case _ => super.syms(e)
+  }
+
+  override def symsFreq(e: Any): List[(Sym[Any], Double)] = e match {
+    case Code(v) => symsFreq(v)
+    case c@CodeCont(_, _) => symsFreq(c.force)
+    case AppRep(f, a, x, y) => freqNormal(f) ::: freqNormal(a) ::: freqHot(y)
+    case EvalfunRep(x, y) => freqHot(y)
+    case ContRep(_, _, x, y) => freqHot(y)
+    case _ => super.symsFreq(e)
+  }
+
 }
 
 trait EvalDslGen extends ScalaGenIfThenElse {
