@@ -387,6 +387,7 @@ object eval {
     val o = implicitly[Ops[R]]
     val (cond, thenp, elsep) = exp match {
       case P(_, P(cond, P(thenp, P(elsep, N)))) => (cond, thenp, elsep)
+      case P(_, P(cond, P(thenp, N))) => (cond, thenp, B(false))
     }
     meta_apply[R](m, S("base-eval"), cond, env, o._cont(new FunC[R] { def fun[R1[_]:Ops](implicit ev: Convert[R,R1]) = { vc =>
       val o1 = implicitly[Ops[R1]]; import o1._

@@ -90,10 +90,12 @@ class TestEM extends TestSuite with BeforeAndAfter {
       assertResult(I(3)){ev("(EM (cont 1))")}
       assertResult(I(5)){ev("((lambda (x) (+ 3 x)) 2)")}
       assertResult(I(4)){ev("(EM (cont 1))")}
+      assertResult(I(4)){ev("((clambda (y) (+ y ((clambda (x) (+ 2 x)) 2))) 0)")}
+      assertResult(I(3)){ev("(EM (cont 1))")}
     }
-    ev("(EM (set! eval-var (clambda (e r k) (set! cont k) (original-eval-var e r k))))")
+    ev("(EM (set! eval-var (clambda (e r k) (if (eq? e 'x) (set! cont k)) (original-eval-var e r k))))")
     go()
-    ev("(EM (set! eval-var (lambda (e r k) (set! cont k) (original-eval-var e r k))))")
+    ev("(EM (set! eval-var (lambda (e r k) (if (eq? e 'x) (set! cont k)) (original-eval-var e r k))))")
     go()
   }
 
