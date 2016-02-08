@@ -86,25 +86,4 @@ class TestBase extends TestSuite with BeforeAndAfter {
       ev(s"((${make_counter(true)} 0))")
     }
   }
-
-  test("code generation for Y") {
-    checkOut("Y",
-      ev(Y(true)))
-  }
-
-  test("code generation for fib") {
-    checkOut("fib",
-      ev(fib(true)))
-  }
-
-  test("code generation for sumf") {
-    checkOut("sumf",
-      ev(sumf(true)))
-  }
-
-  test("code generation for counter") {
-    checkOut("counter",
-      ev(make_counter(true)))
-  }
-
 }

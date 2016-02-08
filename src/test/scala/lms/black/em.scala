@@ -110,15 +110,4 @@ class TestEM extends TestSuite with BeforeAndAfter {
     ev("(EM (set! eval-var (lambda (e r k) (original-eval-var e r k))))")
     assertResult(I(1)){ev("((clambda (x) x) 1)")}
   }
-
-  test("code generation for fib under var counter") {
-    ev("(EM (define counter 0))")
-    ev("(EM (define old-eval-var eval-var))")
-    ev("""(EM (set! eval-var (clambda (e r k)
-      (if (eq? e 'n) (set! counter (+ counter 1)) 0)
-      (old-eval-var e r k))))""")
-    ev("(define fib (lambda (n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2))))))")
-    checkOut("fib_var_counter",
-      ev("(set! fib (clambda (n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2))))))"))
-  }
 }
