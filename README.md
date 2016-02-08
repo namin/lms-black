@@ -19,8 +19,8 @@ An [example](src/test/scala/lms/black/em.scala#L15).
 Suppose we change the meta-interpreter so that it increments
 a counter each time a variable named `n` is accessed. Re-defining fibonacci
 with parameter `n` as a compiled lambda will generate code that includes
-a code for a counter increment each time `n` is mentioned in the body
-(compare [test](src/test/scala/lms/black/gen.scala)-generated code
+code for a counter increment each time `n` is mentioned in the body
+(compare [test](src/test/scala/lms/black/gen.scala#L15)-generated code
 [without](src/out/fib.check.scala) vs
 [with](src/out/fib_em_var_counter.check.scala) the meta-change).
 Running this compiled `fib` function has the same behavior as an uncompiled
