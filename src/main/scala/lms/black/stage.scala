@@ -20,10 +20,7 @@ trait EvalDsl extends IfThenElse with LiftBoolean {
   implicit object OpsRep extends scala.Serializable with Ops[Rep] {
     type Tag[A] = Typ[A]
     def valueTag = typ[Value]
-    def _lift(v: Value) = v match {
-      case k@CodeCont(_, _) => k.asInstanceOf[CodeCont[Rep]].force
-      case _ => unit(v)
-    }
+    def _lift(v: Value) = unit(v)
     def _unlift(v: Rep[Value]) = Code(v)
     def _app(f: Rep[Value], args: Rep[Value], cont: Value) = app_rep(f, args, cont)
     def _true(v: Rep[Value]): Rep[Boolean] = true_rep(v)
@@ -161,6 +158,8 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
   }
 
   override def boundSyms(e: Any): List[Sym[Any]] = e match {
+    case Code(v) => boundSyms(v)
+    case c@CodeCont(_, _) => boundSyms(c.force)
     case AppRep(f, a, x, y) => syms(x) ::: effectSyms(y)
     case EvalfunRep(x, y) => syms(x) ::: effectSyms(y)
     case ContRep(_, _, x, y) => syms(x) ::: effectSyms(y)
@@ -202,17 +201,18 @@ trait EvalDslGen extends ScalaGenIfThenElse {
 
   def quoteL(x: Exp[Any]) : String = x match {
     case Const(Code(e: Exp[Any])) => quote(e)
+    case Const(c@CodeCont(_, _)) => quote(c.asInstanceOf[CodeCont[Rep]].force)
     case Const(v: Value) => quoteO+"._lift("+quote(x)+")"
     case _ => quote(x)
   }
   def quoteInP(x: Value) : String = x match {
-    case Code(_) => quoteO+"._unlift("+quote(Const(x))+")"
-    case c@CodeCont(_, _) =>  quoteO+"._unlift("+quote(c.asInstanceOf[CodeCont[Rep]].force)+")"
+    case Code(_) | CodeCont(_, _) => quoteO+"._unlift("+quote(Const(x))+")"
     case _ => quote(Const(x))
   }
   override def quote(x: Exp[Any]) : String = x match {
     case Const(P(a, b)) => "P("+quoteInP(a)+", "+quoteInP(b)+")"
     case Const(Code(c)) => if (c.isInstanceOf[Rep[Any]]) quote(c.asInstanceOf[Rep[Any]]) else quote(Const(c.asInstanceOf[Value]))
+    case Const(c@CodeCont(_, _)) => quote(c.asInstanceOf[CodeCont[Rep]].force)
     case Const(Clo(param, body, env, m)) =>  "Clo("+quote(Const(param))+", "+quote(Const(body))+", "+quote(Const(env))+", "+m.toString+")"
     case _ => super.quote(x)
   }
