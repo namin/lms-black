@@ -21,8 +21,6 @@ class staged$0 extends Fun[NoRep] with (Value => Value) {
         val x10 = o1._cons(x9, o1._lift(N))
         val x12 = o1._app(x8, x10,
         o1._cont(new FunC[R1] { def fun[R2[_]:Ops](implicit ev1_2: Convert[R1,R2]) = {(x11: R2[Value]) =>
-            val o2 = implicitly[Ops[R2]]
-            implicit def convert_ev1_2(x: R1[Value]): R2[Value] = ev1_2.convert(x)
             x11: R2[Value]
         }})
         )
@@ -52,8 +50,6 @@ class staged$0 extends Fun[NoRep] with (Value => Value) {
                 val x29 = o3._cons(x28, o3._lift(N))
                 val x31 = o3._app(x27, x29,
                 o3._cont(new FunC[R3] { def fun[R4[_]:Ops](implicit ev3_4: Convert[R3,R4]) = {(x30: R4[Value]) =>
-                    val o4 = implicitly[Ops[R4]]
-                    implicit def convert_ev3_4(x: R3[Value]): R4[Value] = ev3_4.convert(x)
                     x30: R4[Value]
                 }})
                 )
@@ -65,8 +61,6 @@ class staged$0 extends Fun[NoRep] with (Value => Value) {
         val x36 = o1._cons(x35, o1._lift(N))
         val x38 = o1._app(x19, x36,
         o1._cont(new FunC[R1] { def fun[R2[_]:Ops](implicit ev1_2: Convert[R1,R2]) = {(x37: R2[Value]) =>
-            val o2 = implicitly[Ops[R2]]
-            implicit def convert_ev1_2(x: R1[Value]): R2[Value] = ev1_2.convert(x)
             x37: R2[Value]
         }})
         )
@@ -75,8 +69,6 @@ class staged$0 extends Fun[NoRep] with (Value => Value) {
     val x41 = o._cons(x40, o._lift(N))
     val x43 = o._app(x14, x41,
     o._cont(new FunC[R] { def fun[R1[_]:Ops](implicit ev_1: Convert[R,R1]) = {(x42: R1[Value]) =>
-        val o1 = implicitly[Ops[R1]]
-        implicit def convert_ev_1(x: R[Value]): R1[Value] = ev_1.convert(x)
         x42: R1[Value]
     }})
     )

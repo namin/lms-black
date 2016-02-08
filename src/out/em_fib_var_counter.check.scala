@@ -89,8 +89,6 @@ class staged$0 extends Fun[NoRep] with (Value => Value) {
                                       val x10849 = o8._cons(x10704, x10848)
                                       val x10851 = o8._app(o8._lift(Prim("+")), x10849,
                                       o8._cont(new FunC[R8] { def fun[R9[_]:Ops](implicit ev8_9: Convert[R8,R9]) = {(x10850: R9[Value]) =>
-                                          val o9 = implicitly[Ops[R9]]
-                                          implicit def convert_ev8_9(x: R8[Value]): R9[Value] = ev8_9.convert(x)
                                           x10850: R9[Value]
                                       }})
                                       )
