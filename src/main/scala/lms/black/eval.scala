@@ -509,6 +509,10 @@ object eval {
       case I(_) => true
       case _ => false
     })
+    case ("pair?", P(a, N)) => B(a match {
+      case P(_, _) => true
+      case _ => false
+    })
     case ("<", P(I(a), P(I(b), N))) => B(a < b)
     case ("+", P(I(a), P(I(b), N))) => I(a+b)
     case ("-", P(I(a), P(I(b), N))) => I(a-b)
@@ -526,6 +530,7 @@ object eval {
   def init_frame_list = List(
     P(S("null?"), Prim("null?")),
     P(S("number?"), Prim("number?")),
+    P(S("pair?"), Prim("pair?")),
     P(S("<"), Prim("<")),
     P(S("+"), Prim("+")),
     P(S("-"), Prim("-")),
