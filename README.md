@@ -15,12 +15,15 @@ How? All functions are polymorphic as to whether they generate code or run.
 Generated code, when compiled, is also polymorphic in this way so that there's
 no difference between built-in and compiled functions.
 
-An [example](https://github.com/namin/lms-black/blob/master/src/test/scala/lms/black/em.scala#L15).
+An [example](src/test/scala/lms/black/em.scala#L15).
 Suppose we change the meta-interpreter so that it increments
 a counter each time a variable named `n` is accessed. Re-defining fibonacci
 with parameter `n` as a compiled lambda will generate code that includes
-a code for a counter increment each time `n` is mentioned in the body.
-Running this compiled `fib` function gives the same result as an uncompiled
+code for a counter increment each time `n` is mentioned in the body
+(compare [test](src/test/scala/lms/black/gen.scala#L15)-generated code
+[without](src/out/fib.check.scala) vs
+[with](src/out/fib_em_var_counter.check.scala) the meta-change).
+Running this compiled `fib` function has the same behavior as an uncompiled
 `fib` function evaluated by the modified interpreter. Still, once we undo
 the modifications to the interpreter, the previously compiled `fib` function
 will still update the counter.
