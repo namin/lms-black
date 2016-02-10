@@ -43,3 +43,27 @@
         (if (delta? e)
             (apply-delta e r k)
             (old-eval-application e r k))))
+
+(define meaning base-eval)
+
+;; at user level
+
+(define map
+  (lambda (f xs)
+    (if (null? xs)
+        '()
+        (cons (f (car xs)) (map f (cdr xs))))))
+
+(let ((x 1)) ((delta (e r k) (meaning (car e) r k)) x))
+;; => 1
+
+(define call/cc
+  (lambda (f)
+    ((delta (e r k)
+      ((meaning 'f r (lambda (v) v)) k)))))
+
+(+ 1 (call/cc (lambda (k) 0)))
+;; => 0
+
+(+ 1 (call/cc (lambda (k) (k 0))))
+;; => 1
