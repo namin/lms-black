@@ -513,6 +513,10 @@ object eval {
       case P(_, _) => true
       case _ => false
     })
+    case ("symbol?", P(a, N)) => B(a match {
+      case S(_) => true
+      case _ => false
+    })
     case ("<", P(I(a), P(I(b), N))) => B(a < b)
     case ("+", P(I(a), P(I(b), N))) => I(a+b)
     case ("-", P(I(a), P(I(b), N))) => I(a-b)
@@ -531,6 +535,7 @@ object eval {
     P(S("null?"), Prim("null?")),
     P(S("number?"), Prim("number?")),
     P(S("pair?"), Prim("pair?")),
+    P(S("symbol?"), Prim("symbol?")),
     P(S("<"), Prim("<")),
     P(S("+"), Prim("+")),
     P(S("-"), Prim("-")),
