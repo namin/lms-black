@@ -130,6 +130,8 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
       val efn = funs(ekey).fun[Rep]
       val r = efn(vs)
       apply_cont[Rep](cont, r)
+    case (Const(fcont), Const(P(a, N))) if isCont(fcont) =>
+      apply_cont[Rep](cont, apply_cont[Rep](fcont, OpsRep._lift(a)))
     case (Const(fcont), Def(ConsRep(a, Const(N)))) if isCont(fcont) =>
       apply_cont[Rep](cont, apply_cont[Rep](fcont, a))
     case (_, _) =>
