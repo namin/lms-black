@@ -175,11 +175,16 @@ object eval {
       None
   }
 
+  def apply_lifted_cont[R[_]:Ops](cont: R[Value], v: R[Value]): R[Value] = {
+      val o = implicitly[Ops[R]]; import o._
+      _app(cont, _cons(v, N), _cont(new FunC[R] {def fun[R1[_]:Ops](implicit ev: Convert[R,R1]) = {v => v}}))
+  }
+
   def apply_cont[R[_]:Ops](cont: Value, v: R[Value]): R[Value] = cont2fun[R](cont) match {
     case Some(f) => f(v)
     case None =>
       val o = implicitly[Ops[R]]; import o._
-      static_apply[R](cont, P(_unlift(v), N), _cont(new FunC[R] {def fun[R1[_]:Ops](implicit ev: Convert[R,R1]) = { v => v}}))
+      static_apply[R](cont, P(_unlift(v), N), _cont(new FunC[R] {def fun[R1[_]:Ops](implicit ev: Convert[R,R1]) = {v => v}}))
   }
 
   def static_apply[R[_]:Ops](fun: Value, args: Value, cont: Value) = {
@@ -332,10 +337,11 @@ object eval {
     }
     if (!inRep) {
       trait Program extends EvalDsl {
+        val or: Ops[Rep] = OpsRep
         def snippet(v: Rep[Value]): Rep[Value] = {
           meta_apply[Rep](m, S("eval-begin"), body,
-            env_extend[Rep](env, params, Code(v))(OpsRep),
-            _cont(new FunC[R] {def fun[R1[_]:Ops](implicit ev: Convert[R,R1]) = { v => v}}))(OpsRep)
+            env_extend[Rep](env, params, Code(v)),
+            or._cont(new FunC[Rep] {def fun[R1[_]:Ops](implicit ev: Convert[Rep,R1]) = {v => v}}))
         }
       }
       val r = new EvalDslDriver with Program
