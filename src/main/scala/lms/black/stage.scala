@@ -116,13 +116,15 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
   var omit_reads = Set[Rep[Value]]()
   case class AppRep(f: Rep[Value], args: Rep[Value], cont_x: Sym[Value], cont_y: Block[Value]) extends Def[Value]
 
+  object InCell {
+    def unapply(cid: String) = cells.get(cid)
+  }
   def app_rep(f: Rep[Value], args: Rep[Value], cont: Value): Rep[Value] = (f, args) match {
     case (Const(fprim@Prim(p)), Const(vs@P(_, _))) if !effectful_primitives.contains(fprim) && !hasCode(vs) =>
       val r = apply_primitive(p, vs)
       apply_cont[Rep](cont, OpsRep._lift(r))
-    case (Def(Reflect(CellReadRep(Const(Cell(cid))), _, _)), Const(vs@P(a, P(_, P(_, N))))) if !hasCode(a) =>
+    case (Def(Reflect(CellReadRep(Const(Cell(InCell(Evalfun(ekey))))), _, _)), Const(vs@P(a, P(_, P(_, N))))) if !hasCode(a) =>
       omit_reads += f
-      val Evalfun(ekey) = cells(cid)
       val efn = funs(ekey).fun[Rep]
       val r = efn(vs)
       apply_cont[Rep](cont, r)
