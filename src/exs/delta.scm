@@ -60,9 +60,9 @@
 ;; => 1
 
 (define call/cc
-  (lambda (f) ;; semantically, we cannot use a clambda here, because it resets the continuation
+  (clambda (f)
     ((delta (e r k)
-      ((meaning 'f r (clambda (v) v)) k)))))
+      ((meaning 'f r (clambda (f) (f k)))))))) ;; we lose the meta-continuation
 
 (+ 1 (call/cc (clambda (k) 0)))
 ;; => 0
