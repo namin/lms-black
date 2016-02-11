@@ -123,12 +123,12 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
     case (Const(fprim@Prim(p)), Const(vs@P(_, _))) if !effectful_primitives.contains(fprim) && !hasCode(vs) =>
       val r = apply_primitive(p, vs)
       apply_cont[Rep](cont, OpsRep._lift(r))
-    case (Def(Reflect(CellReadRep(Const(Cell(InCell(Evalfun(ekey))))), _, _)), Const(vs@P(a, P(_, P(_, N))))) if !hasCode(a) =>
+    case (Def(Reflect(CellReadRep(Const(Cell(InCell(Evalfun(ekey))))), _, _)), Const(vs@P(_, _))) =>
       omit_reads += f
       val efn = funs(ekey).fun[Rep]
       val r = efn(vs)
       apply_cont[Rep](cont, r)
-    case (Const(Evalfun(ekey)), Const(vs@P(a, P(_, P(_, N))))) if !hasCode(a) =>
+    case (Const(Evalfun(ekey)), Const(vs@P(_, _))) =>
       val efn = funs(ekey).fun[Rep]
       val r = efn(vs)
       apply_cont[Rep](cont, r)
