@@ -194,7 +194,7 @@ object eval {
         meta_apply[R](m, S("eval-begin"), body, env_extend[R](cenv, params, args), cont)
       case Evalfun(key) =>
         val f = funs(key).fun[R]
-        apply_cont[R](cont, f(args))
+        f(cons(cont, args))
       case Prim(p) =>
         apply_cont[R](cont, apply_primitive(p, args))
       case _ if isCont(fun) =>
@@ -214,13 +214,12 @@ object eval {
       case c@Cell(_) => (c, cell_read(c))
     }
     val args = P(exp, P(env, P(cont, N)))
-    val meta_cont = _cont(new FunC[R] {def fun[R1[_]:Ops](implicit ev: Convert[R,R1]) = { v => v}})
-    static_apply[R](fun, args, meta_cont)
+    static_apply[R](fun, args, _cont(new FunC[R] {def fun[R1[_]:Ops](implicit ev: Convert[R,R1]) = {v => v}}))
   }
 
   def eval_list_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
     def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
-      val P(exps, P(env, P(cont, N))) = vc
+      val P(_, P(exps, P(env, P(cont, N)))) = vc
       eval_list[R](m, exps, env, cont)
     }
   }
@@ -240,7 +239,7 @@ object eval {
 
   def base_eval_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
     def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
-      val P(exp, P(env, P(cont, N))) = vc
+      val P(_, P(exp, P(env, P(cont, N)))) = vc
       base_eval[R](m, exp, env, cont)
     }
   }
@@ -264,7 +263,7 @@ object eval {
 
   def eval_begin_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
     def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
-      val P(body, P(env, P(cont, N))) = vc
+      val P(_, P(body, P(env, P(cont, N)))) = vc
       eval_begin[R](m, body, env, cont)
     }
   }
@@ -280,7 +279,7 @@ object eval {
 
   def eval_application_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
     def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
-      val P(exp, P(env, P(cont, N))) = vc
+      val P(_, P(exp, P(env, P(cont, N)))) = vc
       eval_application[R](m, exp, env, cont)
     }
   }
@@ -297,7 +296,7 @@ object eval {
 
   def eval_var_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
     def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
-      val P(exp, P(env, P(cont, N))) = vc
+      val P(_, P(exp, P(env, P(cont, N)))) = vc
       eval_var[R](m, exp, env, cont)
     }
   }
@@ -312,7 +311,7 @@ object eval {
 
   def eval_lambda_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
     def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
-      val P(exp, P(env, P(cont, N))) = vc
+      val P(_, P(exp, P(env, P(cont, N)))) = vc
       eval_lambda[R](m, exp, env, cont)
     }
   }
@@ -326,7 +325,7 @@ object eval {
 
   def eval_clambda_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
     def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
-      val P(exp, P(env, P(cont, N))) = vc
+      val P(_, P(exp, P(env, P(cont, N)))) = vc
       eval_clambda[R](m, exp, env, cont)
     }
   }
@@ -338,10 +337,12 @@ object eval {
     if (!inRep) {
       trait Program extends EvalDsl {
         val or: Ops[Rep] = OpsRep
-        def snippet(v: Rep[Value]): Rep[Value] = {
+        def snippet(kv: Rep[Value]): Rep[Value] = {
           meta_apply[Rep](m, S("eval-begin"), body,
-            env_extend[Rep](env, params, Code(v)),
-            or._cont(new FunC[Rep] {def fun[R1[_]:Ops](implicit ev: Convert[Rep,R1]) = {v => v}}))
+            env_extend[Rep](env, params, Code(or._cdr(kv))),
+            or._cont(new FunC[Rep] {def fun[R1[_]:Ops](implicit ev: Convert[Rep,R1]) = {v =>
+              apply_lifted_cont[R1](ev.convert(or._car(kv)), v)
+            }}))
         }
       }
       val r = new EvalDslDriver with Program
@@ -349,11 +350,15 @@ object eval {
       apply_cont[R](cont, _lift(evalfun(r.f)))
     } else {
       val f = _fun(new Fun[R] {
-        def fun[RF[_]:Ops](implicit ev: Convert[R,RF]) = {
-          ((v: R[Value]) => {
+        def fun[RF[_]:Ops](implicit ev0: Convert[R,RF]) = {
+          val or = implicitly[Ops[RF]]
+          ((kv0: R[Value]) => {
+            val kv = ev0.convert(kv0)
             meta_apply[RF](m, S("eval-begin"), body,
-              env_extend[RF](env, params, Code(v)),
-              _cont(new FunC[R] {def fun[R1[_]:Ops](implicit ev: Convert[R,R1]) = { v => v}}))
+              env_extend[RF](env, params, Code(or._cdr(kv))),
+              or._cont(new FunC[RF] {def fun[R1[_]:Ops](implicit ev: Convert[RF,R1]) = { v =>
+                apply_lifted_cont[R1](ev.convert(or._car(kv)), v)
+              }}))
           })
         }
       })
@@ -363,7 +368,7 @@ object eval {
 
   def eval_let_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
     def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
-      val P(exp, P(env, P(cont, N))) = vc
+      val P(_, P(exp, P(env, P(cont, N)))) = vc
       eval_let[R](m, exp, env, cont)
     }
   }
@@ -385,7 +390,7 @@ object eval {
 
   def eval_if_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
     def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
-      val P(exp, P(env, P(cont, N))) = vc
+      val P(_, P(exp, P(env, P(cont, N)))) = vc
       eval_if[R](m, exp, env, cont)
     }
   }
@@ -405,7 +410,7 @@ object eval {
 
   def eval_set_bang_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
     def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
-      val P(exp, P(env, P(cont, N))) = vc
+      val P(_, P(exp, P(env, P(cont, N)))) = vc
       eval_set_bang[R](m, exp, env, cont)
     }
   }
@@ -424,7 +429,7 @@ object eval {
 
   def eval_define_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
     def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
-      val P(exp, P(env, P(cont, N))) = vc
+      val P(_, P(exp, P(env, P(cont, N)))) = vc
       eval_define[R](m, exp, env, cont)
     }
   }
@@ -445,7 +450,7 @@ object eval {
 
   def eval_quote_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
     def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
-      val P(exp, P(env, P(cont, N))) = vc
+      val P(_, P(exp, P(env, P(cont, N)))) = vc
       eval_quote[R](m, exp, env, cont)
     }
   }
@@ -459,7 +464,7 @@ object eval {
 
   def eval_EM_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
     def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
-      val P(exp, P(env, P(cont, N))) = vc
+      val P(_, P(exp, P(env, P(cont, N)))) = vc
       eval_EM[R](m, exp, env, cont)
     }
   }
