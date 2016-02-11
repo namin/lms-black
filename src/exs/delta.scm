@@ -61,8 +61,8 @@
 
 (define call/cc
   (clambda (f)
-    ((delta (e r k)
-      ((meaning 'f r (clambda (f) (f k)))))))) ;; we lose the meta-continuation
+      ((delta (e r k)
+              ((meaning 'f r (clambda (v) v)) k)))))
 
 (+ 1 (call/cc (clambda (k) 0)))
 ;; => 0
