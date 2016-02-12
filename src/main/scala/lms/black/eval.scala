@@ -198,7 +198,7 @@ object eval {
       case Prim(p) =>
         apply_cont[R](cont, apply_primitive(p, args))
       case _ if isCont(fun) =>
-        apply_cont[R](cont, apply_cont[R](fun, car(args)))
+        apply_cont[R](fun, car(args)) // lost cont
     }
   }
 

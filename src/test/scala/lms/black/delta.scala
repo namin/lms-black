@@ -88,6 +88,8 @@ $call_cc
     if (c) cev(all) else ev(all)
     assertEv(I(0)){"(+ 1 (call/cc (lambda (k) 0)))"}
     assertEv(I(1)){"(+ 1 (call/cc (lambda (k) (k 0))))"}
+    assertEv(I(2)){"(+ 1 (call/cc (lambda (k) (begin (k 1) (k 3)))))"}
+    assertEv(I(2)){"(+ 1 (call/cc (lambda (k) (begin (k (k 1)) (k 3)))))"}
   }
 
   test("delta") {
