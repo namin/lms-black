@@ -34,6 +34,14 @@ class TestCont extends TestSuite with BeforeAndAfter {
 
 )"""
 
+  def pushy = """(EM (EM (begin
+(define old-base-apply base-apply)
+(set! base-apply (lambda (fa r k)
+  (if (continuation? (car fa))
+    (k (old-base-apply fa r (lambda (x) x)))
+    (old-base-apply fa r k))))
+)))"""
+
   def dummy = """(EM (begin
 (define old-eval-var eval-var)
 (set! eval-var (lambda (e r k)
@@ -43,6 +51,7 @@ class TestCont extends TestSuite with BeforeAndAfter {
 
   def make_ev(c: Boolean) =
     if (c) {s: String => ev(s.replace("lambda", "clambda"))} else ev(_)
+
   def test_resume(c: Boolean) = {
     val mev = make_ev(c)
     mev(resume)
@@ -60,5 +69,20 @@ class TestCont extends TestSuite with BeforeAndAfter {
 
   test("resume continuations (all compiled)") {
     test_resume(true)
+  }
+
+  def test_pushy(c: Boolean) = {
+    val mev = make_ev(c)
+    mev(pushy)
+    mev(dummy)
+    assertResult(I(3)){ev("dummy")}
+  }
+
+  test("pushy continuations") {
+    test_pushy(false)
+  }
+
+  test("pushy continuations (all compiled)") {
+    test_pushy(true)
   }
 }
