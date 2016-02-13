@@ -536,6 +536,7 @@ object eval {
       case S(_) => true
       case _ => false
     })
+    case ("continuation?", P(a, N)) => B(isCont(a))
     case ("<", P(I(a), P(I(b), N))) => B(a < b)
     case ("+", P(I(a), P(I(b), N))) => I(a+b)
     case ("-", P(I(a), P(I(b), N))) => I(a-b)
@@ -555,6 +556,7 @@ object eval {
     P(S("number?"), Prim("number?")),
     P(S("pair?"), Prim("pair?")),
     P(S("symbol?"), Prim("symbol?")),
+    P(S("continuation?"), Prim("continuation?")),
     P(S("<"), Prim("<")),
     P(S("+"), Prim("+")),
     P(S("-"), Prim("-")),
