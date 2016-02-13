@@ -202,6 +202,13 @@ object eval {
     }
   }
 
+  def base_apply_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
+    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
+      val o = implicitly[Ops[R]]
+      val P(mcont, P(P(fun, args), P(env, P(cont, N)))) = vc
+      apply_cont[R](mcont, base_apply[R](m, o._lift(fun), o._lift(args), env, cont))
+    }
+  }
   def base_apply[R[_]:Ops](m: MEnv, fun: R[Value], args: R[Value], env: Value, cont: Value) = {
     val o = implicitly[Ops[R]]
     o._app(fun, args, cont)
@@ -289,7 +296,8 @@ object eval {
     meta_apply[R](m, S("base-eval"), fun, env, _cont(new FunC[R] { def fun[R1[_]:Ops](implicit ev: Convert[R,R1]) = { v =>
       val o1 = implicitly[Ops[R1]]
       meta_apply[R1](m, S("eval-list"), args, env, o1._cont(new FunC[R1] { def fun[R2[_]:Ops](implicit ev12: Convert[R1,R2]) = { vs =>
-        base_apply[R2](m, ev12.convert(v), vs, env, cont)
+        val o2 = implicitly[Ops[R2]]
+        meta_apply[R2](m, S("base-apply"), cons(o2._unlift(ev12.convert(v)), o2._unlift(vs)), env, cont)
       }}))
     }}))
   }
@@ -571,7 +579,8 @@ object eval {
     binding("eval-application", evalfun(eval_application_fun(m))),
     binding("eval-var", evalfun(eval_var_fun(m))),
     binding("eval-list", evalfun(eval_list_fun(m))),
-    binding("base-eval", evalfun(base_eval_fun(m)))) ++
+    binding("base-eval", evalfun(base_eval_fun(m))),
+    binding("base-apply", evalfun(base_apply_fun(m)))) ++
     init_frame_list
   )
   def init_env = cons(cell_new(init_frame, "global"), N)

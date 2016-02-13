@@ -6,6 +6,7 @@ import scala.lms.common._
 trait EvalDsl extends IfThenElse with LiftBoolean {
   implicit def valTyp: Typ[Value]
   implicit def boolTyp: Typ[Boolean]
+  def unlift_rep(v: Rep[Value]): Value
   def app_rep(f: Rep[Value], args: Rep[Value], cont: Value): Rep[Value]
   def fun_rep(f: Fun[Rep]): Rep[Value]
   def cont_rep(c: CodeCont[Rep], k: FunC[Rep]): Rep[Value]
@@ -20,8 +21,11 @@ trait EvalDsl extends IfThenElse with LiftBoolean {
   implicit object OpsRep extends scala.Serializable with Ops[Rep] {
     type Tag[A] = Typ[A]
     def valueTag = valTyp
-    def _lift(v: Value) = unit(v)
-    def _unlift(v: Rep[Value]) = Code(v)
+    def _lift(v: Value) = v match {
+      case Code(r) => r.asInstanceOf[Rep[Value]]
+      case _ => unit(v)
+    }
+    def _unlift(v: Rep[Value]) = unlift_rep(v)
     def _app(f: Rep[Value], args: Rep[Value], cont: Value) = app_rep(f, args, cont)
     def _true(v: Rep[Value]): Rep[Boolean] = true_rep(v)
     def _if[A:Tag](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A] = if_rep(cond, thenp, elsep)
@@ -54,6 +58,11 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
   case class CellReadRep(c: Rep[Value]) extends Def[Value]
   case class CellSetRep(c: Rep[Value], v: Rep[Value]) extends Def[Value]
   case class CellNewRep(v: Rep[Value], s: String) extends Def[Value]
+
+  def unlift_rep(r: Rep[Value]) = r match {
+    case Const(v: Value) => v
+    case _ => Code(r)
+  }
 
   def cons_rep(car: Rep[Value], cdr: Rep[Value]) = (car, cdr) match {
     case (Const(a), Const(b)) => Const[Value](P(a, b))
