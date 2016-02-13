@@ -25,6 +25,7 @@ trait EvalDsl extends IfThenElse with LiftBoolean {
       case Code(r) => r.asInstanceOf[Rep[Value]]
       case _ => unit(v)
     }
+    def _liftb(b: Boolean) = unit(b)
     def _unlift(v: Rep[Value]) = unlift_rep(v)
     def _app(f: Rep[Value], args: Rep[Value], cont: Value) = app_rep(f, args, cont)
     def _true(v: Rep[Value]): Rep[Boolean] = true_rep(v)
@@ -232,9 +233,11 @@ trait EvalDslGen extends ScalaGenIfThenElse {
     if (!rs.tail.isEmpty && getBlockResult(y)!=x) {
       stream.print("val "+quoteO+" = implicitly[Ops["+r2+"]]; ")
       stream.print("implicit def convert_"+quoteEv+"(x: "+r1+"[Value]): "+r2+"[Value] = "+quoteEv+".convert(x); ")
+      stream.print("implicit def convertb_"+quoteEv+"(x: "+r1+"[Boolean]): "+r2+"[Boolean] = "+quoteEv+".convertb(x); ")
       for ((b, c) <- rs.tail.zip(rs.tail.tail)) {
         stream.print("val "+quote_Ev(a, c)+": Convert["+quote_R(c)+","+quote_R(a)+"] = convertTrans["+quote_R(c)+","+quote_R(b)+","+quote_R(a)+"]("+quote_Ev(b, c)+", "+quote_Ev(a, b)+"); ")
         stream.print("implicit def convert_"+quote_Ev(a, c)+"(x: "+quote_R(c)+"[Value]): "+quote_R(a)+"[Value] = "+quote_Ev(a, c)+".convert(x); ")
+        stream.print("implicit def convertb_"+quote_Ev(a, c)+"(x: "+quote_R(c)+"[Boolean]): "+quote_R(a)+"[Boolean] = "+quote_Ev(a, c)+".convertb(x); ")
       }
       stream.println("")
     }
@@ -271,10 +274,12 @@ trait EvalDslGen extends ScalaGenIfThenElse {
       emitValDef(sym, oldO+"._fun(new Fun["+r1+"] { def fun["+r2+"[_]:Ops](implicit "+quoteEv+": Convert["+r1+","+r2+"]) = {(" + quote(x) + ": "+r1+"[Value]) => ")
       stream.println("val "+quoteO+" = implicitly[Ops["+r2+"]]")
       stream.println("implicit def convert_"+quoteEv+"(x: "+r1+"[Value]): "+r2+"[Value] = "+quoteEv+".convert(x)")
+      stream.println("implicit def convertb_"+quoteEv+"(x: "+r1+"[Boolean]): "+r2+"[Boolean] = "+quoteEv+".convertb(x)")
       if (!rs.tail.isEmpty) {
         for ((b, c) <- rs.tail.zip(rs.tail.tail)) {
           stream.print("val "+quote_Ev(a, c)+": Convert["+quote_R(c)+","+quote_R(a)+"] = convertTrans["+quote_R(c)+","+quote_R(b)+","+quote_R(a)+"]("+quote_Ev(b, c)+", "+quote_Ev(a, b)+"); ")
           stream.print("implicit def convert_"+quote_Ev(a, c)+"(x: "+quote_R(c)+"[Value]): "+quote_R(a)+"[Value] = "+quote_Ev(a, c)+".convert(x); ")
+          stream.print("implicit def convertb_"+quote_Ev(a, c)+"(x: "+quote_R(c)+"[Boolean]): "+quote_R(a)+"[Boolean] = "+quote_Ev(a, c)+".convertb(x); ")
         }
         stream.println("")
       }

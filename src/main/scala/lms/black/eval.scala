@@ -107,21 +107,26 @@ object eval {
 
   trait Convert[W[_], R[_]] {
     implicit def convert(v: W[Value]): R[Value]
+    implicit def convertb(v: W[Boolean]): R[Boolean]
   }
   implicit def convertNoRep[R[_]:Ops] = new Convert[NoRep, R] {
     val o = implicitly[Ops[R]]
     def convert(v: Value) = o._lift(v)
+    def convertb(v: Boolean) = o._liftb(v)
   }
   implicit def convertSame[R[_]] = new Convert[R, R] {
     def convert(v: R[Value]) = v
+    def convertb(v: R[Boolean]) = v
   }
   def convertTrans[R1[_],R2[_],R3[_]](implicit ev12: Convert[R1, R2], ev23: Convert[R2,R3]) = new Convert[R1,R3] {
     def convert(v: R1[Value]) = ev23.convert(ev12.convert(v))
+    def convertb(v: R1[Boolean]) = ev23.convertb(ev12.convertb(v))
   }
   trait Ops[R[_]] {
     type Tag[A]
     implicit def valueTag: Tag[Value]
     implicit def _lift(v: Value): R[Value]
+    def _liftb(b: Boolean): R[Boolean]
     def _unlift(v: R[Value]): Value
     def _app(fun: R[Value], args: R[Value], cont: Value): R[Value]
     def _true(v: R[Value]): R[Boolean]
@@ -141,6 +146,7 @@ object eval {
     type Tag[A] = Unit
     def valueTag = ()
     def _lift(v: Value) = v
+    def _liftb(b: Boolean) = b
     def _unlift(v: Value) = v
     def _app(fun: Value, args: Value, cont: Value) = static_apply[NoRep](fun, args, cont)
     def _true(v: Value) = v match {
