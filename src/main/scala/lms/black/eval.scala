@@ -177,14 +177,14 @@ object eval {
 
   def apply_lifted_cont[R[_]:Ops](cont: R[Value], v: R[Value]): R[Value] = {
       val o = implicitly[Ops[R]]; import o._
-      _app(cont, _cons(v, N), _cont(new FunC[R] {def fun[R1[_]:Ops](implicit ev: Convert[R,R1]) = {v => v}}))
+      _app(cont, _cons(v, N), id_cont[R])
   }
 
   def apply_cont[R[_]:Ops](cont: Value, v: R[Value]): R[Value] = cont2fun[R](cont) match {
     case Some(f) => f(v)
     case None =>
       val o = implicitly[Ops[R]]; import o._
-      static_apply[R](cont, P(_unlift(v), N), _cont(new FunC[R] {def fun[R1[_]:Ops](implicit ev: Convert[R,R1]) = {v => v}}))
+      static_apply[R](cont, P(_unlift(v), N), id_cont[R])
   }
 
   def static_apply[R[_]:Ops](fun: Value, args: Value, cont: Value) = {
@@ -214,7 +214,7 @@ object eval {
       case c@Cell(_) => (c, cell_read(c))
     }
     val args = P(exp, P(env, P(cont, N)))
-    static_apply[R](fun, args, _cont(new FunC[R] {def fun[R1[_]:Ops](implicit ev: Convert[R,R1]) = {v => v}}))
+    static_apply[R](fun, args, id_cont[R])
   }
 
   def eval_list_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
@@ -617,5 +617,10 @@ object eval {
   def init_menv[R[_]:Ops]: MEnv = {
     lazy val m: MEnv = MEnv(init_meta_env(m), init_menv[R])
     m
+  }
+
+  def id_cont[R[_]:Ops] = {
+    val o = implicitly[Ops[R]]
+    o._cont(new FunC[R]{def fun[R1[_]:Ops](implicit ev: Convert[R,R1]) = {v => v}})
   }
 }
