@@ -46,6 +46,7 @@ object printer {
   }
 
   def summarize(f: Evalfun) = {
+    id_count = 0
     val fn = funs(f.key).fun[PrintRep]
     val body =
       fn(P(Code[PrintRep]("k"), Code[PrintRep]("xs"))).

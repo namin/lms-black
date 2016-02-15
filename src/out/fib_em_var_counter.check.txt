@@ -1,16 +1,16 @@
 {(k, xs) =>
-  _app(`+, _cons(_cell_read(<cell counter>), `(1)), _cont{v_9 =>
-    _app(`<, _cons(_car(xs), `(2)), _cont{v_10 =>
-      _if(_true(v_10),
-      _app(`+, _cons(_cell_read(<cell counter>), `(1)), _cont{v_11 =>
-        _app(k, _cons(_car(xs), `()), _cont{v_12 =>
-          v_12})}),
-      _app(`+, _cons(_cell_read(<cell counter>), `(1)), _cont{v_13 =>
-        _app(`-, _cons(_car(xs), `(1)), _cont{v_14 =>
-          _app(_cell_read(<cell fib>), _cons(v_14, `()), _cont{v_15 =>
-            _app(`+, _cons(_cell_read(<cell counter>), `(1)), _cont{v_16 =>
-              _app(`-, _cons(_car(xs), `(2)), _cont{v_17 =>
-                _app(_cell_read(<cell fib>), _cons(v_17, `()), _cont{v_18 =>
-                  _app(`+, _cons(v_15, _cons(v_18, `())), _cont{v_19 =>
-                    _app(k, _cons(v_19, `()), _cont{v_20 =>
-                      v_20})})})})})})})}))})})}
+  _app(`+, _cons(_cell_read(<cell counter>), `(1)), _cont{v_1 =>
+    _app(`<, _cons(_car(xs), `(2)), _cont{v_2 =>
+      _if(_true(v_2),
+      _app(`+, _cons(_cell_read(<cell counter>), `(1)), _cont{v_3 =>
+        _app(k, _cons(_car(xs), `()), _cont{v_4 =>
+          v_4})}),
+      _app(`+, _cons(_cell_read(<cell counter>), `(1)), _cont{v_5 =>
+        _app(`-, _cons(_car(xs), `(1)), _cont{v_6 =>
+          _app(_cell_read(<cell fib>), _cons(v_6, `()), _cont{v_7 =>
+            _app(`+, _cons(_cell_read(<cell counter>), `(1)), _cont{v_8 =>
+              _app(`-, _cons(_car(xs), `(2)), _cont{v_9 =>
+                _app(_cell_read(<cell fib>), _cons(v_9, `()), _cont{v_10 =>
+                  _app(`+, _cons(v_7, _cons(v_10, `())), _cont{v_11 =>
+                    _app(k, _cons(v_11, `()), _cont{v_12 =>
+                      v_12})})})})})})})}))})})}
