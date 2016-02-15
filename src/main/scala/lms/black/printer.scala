@@ -38,9 +38,10 @@ object printer {
       val old_pending = pending
       pending = Nil
       val r = fn(v)
-      val s = pending.reverse.mkString("\n", "\n", "\n")
+      val s = pending.reverse.mkString("\n")
+      val x = if (s.isEmpty) "" else "\n"
       pending = old_pending
-      Code[PrintRep](s"_cont{$v =>\n$s$r}")
+      Code[PrintRep](s"_cont{$v =>\n$s$x$r}")
     }
     def _cons(car: String, cdr: String) = s"_cons($car, $cdr)"
     def _car(p: String) = s"_car($p)"
