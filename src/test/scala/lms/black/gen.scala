@@ -16,6 +16,9 @@ class TestGen extends TestSuite with BeforeAndAfter {
     ev("(define fib (lambda (n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2))))))")
     checkOut(fn,
       ev("(set! fib (clambda (n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2))))))"))
+    checkOut(fn,
+      println(printer.summarize(ev("fib").asInstanceOf[Evalfun])),
+      suffix = "txt")
   }
 
   test("code generation for fib") {
