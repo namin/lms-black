@@ -333,8 +333,7 @@ trait EvalDslImpl extends EvalDslExp { q =>
 
         stream.println("class "+className+(if (staticData.isEmpty) "" else "("+staticData.map(p=>"p"+quote(p._1)+":"+p._1.tp).mkString(",")+")")+" extends Fun[NoRep] with (Value => Value) {")
 
-        // dummy function for CompileScala below to be happy casting
-        stream.println("def apply(v: Value): Value = v")
+        stream.println("def apply(v: Value): Value = fun[NoRep](v)(OpsNoRep, convertSame[NoRep])")
 
         stream.println("def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { v => fun[R](v)(implicitly[Ops[R]], ev)  }")
 

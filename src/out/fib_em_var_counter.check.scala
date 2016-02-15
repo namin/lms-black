@@ -5,7 +5,7 @@ import language.higherKinds
 import language.implicitConversions
 import scala.lms.black.eval._
 class staged$0 extends Fun[NoRep] with (Value => Value) {
-  def apply(v: Value): Value = v
+  def apply(v: Value): Value = fun[NoRep](v)(OpsNoRep, convertSame[NoRep])
   def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { v => fun[R](v)(implicitly[Ops[R]], ev)  }
   def fun[R[_]:Ops](x0:Value)(implicit ev: Convert[NoRep,R]): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
