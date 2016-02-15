@@ -52,7 +52,7 @@ object eval {
     case Cell(key) => cells += (key -> v); v
     case Code(cc) => cell_set(cc.asInstanceOf[Value], v)
   }
-  abstract class Fun[W[_]:Ops] extends Serializable {
+  abstract class Fun[W[_]:Ops] {
     def fun[R[_]:Ops](implicit ev: Convert[W,R]): W[Value] => R[Value]
   }
   var funs = Map[Int, Fun[NoRep]]()
@@ -61,7 +61,7 @@ object eval {
     funs += (key -> f)
     key
   }
-  abstract class FunC[W[_]] extends Serializable {
+  abstract class FunC[W[_]] {
     def fun[R[_]:Ops](implicit ev: Convert[W,R]): R[Value] => R[Value]
   }
   var conts = Map[Int, FunC[NoRep]]()
