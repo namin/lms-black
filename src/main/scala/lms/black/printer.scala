@@ -5,6 +5,7 @@ import eval._
 object printer {
   type PrintRep[A] = String
   var id_count = 0
+  var pending: List[String] = Nil
   implicit object OpsPrinter extends Ops[PrintRep] {
     type Tag[A] = Unit
     def freshSuffix: String = {
@@ -34,14 +35,22 @@ object printer {
       val fn = f.fun[PrintRep]
       val id = freshSuffix
       val v = "v"+id
-      Code[PrintRep](s"_cont{$v =>\n${fn(v)}}")
+      val old_pending = pending
+      pending = Nil
+      val r = fn(v)
+      val s = pending.reverse.mkString("\n", "\n", "\n")
+      pending = old_pending
+      Code[PrintRep](s"_cont{$v =>\n$s$r}")
     }
     def _cons(car: String, cdr: String) = s"_cons($car, $cdr)"
     def _car(p: String) = s"_car($p)"
     def _cdr(p: String) = s"_cdr($p)"
     def _cell_new(v: String, memo: String) = s"_cell_new($v, $memo)"
     def _cell_read(c: String) = s"_cell_read($c)"
-    def _cell_set(c: String, v: String) = s"_cell_set($c, $v)"
+    def _cell_set(c: String, v: String) = {
+      pending = s"_cell_set($c, $v)"::pending
+      ""
+    }
     def inRep = false
   }
 
@@ -52,6 +61,8 @@ object printer {
       fn(P(Code[PrintRep]("k"), Code[PrintRep]("xs"))).
         replace("_cdr(`({k} . {xs}))", "xs").
         replace("_car(`({k} . {xs}))", "k")
-    s"{(k, xs) =>\n$body}"
+    val r = s"{(k, xs) =>\n$body}"
+    assert(pending == Nil)
+    r
   }
 }
