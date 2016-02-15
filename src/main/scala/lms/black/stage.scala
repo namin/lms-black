@@ -22,7 +22,7 @@ trait EvalDsl extends IfThenElse with LiftBoolean {
     type Tag[A] = Typ[A]
     def valueTag = valTyp
     def _lift(v: Value) = v match {
-      case Code(r) => r.asInstanceOf[Rep[Value]]
+      case Code(r: Rep[Value]) => r
       case _ => unit(v)
     }
     def _liftb(b: Boolean) = unit(b)
@@ -208,7 +208,7 @@ trait EvalDslGen extends ScalaGenIfThenElse {
 
   def quoteL(x: Exp[Any]) : String = x match {
     case Const(Code(e: Exp[Any])) => quote(e)
-    case Const(c@CodeCont(_, _)) => quote(c.asInstanceOf[CodeCont[Rep]].force)
+    case Const(c: CodeCont[Rep]) => quote(c.force)
     case Const(v: Value) => quoteO+"._lift("+quote(x)+")"
     case _ => quote(x)
   }
@@ -218,8 +218,9 @@ trait EvalDslGen extends ScalaGenIfThenElse {
   }
   override def quote(x: Exp[Any]) : String = x match {
     case Const(P(a, b)) => "P("+quoteInP(a)+", "+quoteInP(b)+")"
-    case Const(Code(c)) => if (c.isInstanceOf[Rep[Any]]) quote(c.asInstanceOf[Rep[Any]]) else quote(Const(c.asInstanceOf[Value]))
-    case Const(c@CodeCont(_, _)) => quote(c.asInstanceOf[CodeCont[Rep]].force)
+    case Const(Code(c: Rep[Any])) => quote(c)
+    case Const(Code(c: Value)) => quote(Const(c))
+    case Const(c: CodeCont[Rep]) => quote(c.force)
     case Const(Clo(param, body, env, m)) =>  "Clo("+quote(Const(param))+", "+quote(Const(body))+", "+quote(Const(env))+", "+m.toString+")"
     case _ => super.quote(x)
   }

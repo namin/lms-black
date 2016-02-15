@@ -45,12 +45,12 @@ object eval {
   def cell_new(v: Value, memo: String) = Cell(addCell(v, memo))
   def cell_read(c: Value): Value = c match {
     case Cell(key) => cells(key)
-    case Code(cc) => cell_read(cc.asInstanceOf[Value])
+    case Code(cc: Value) => cell_read(cc)
     case _ => c
   }
   def cell_set(c: Value, v: Value): Value = c match {
     case Cell(key) => cells += (key -> v); v
-    case Code(cc) => cell_set(cc.asInstanceOf[Value], v)
+    case Code(cc: Value) => cell_set(cc, v)
   }
   abstract class Fun[W[_]:Ops] {
     def fun[R[_]:Ops](implicit ev: Convert[W,R]): W[Value] => R[Value]
