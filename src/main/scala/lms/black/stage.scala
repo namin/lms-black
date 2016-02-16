@@ -148,8 +148,7 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
       //println("//DEBUG "+f+" applied to "+args)
       val x = fresh[Value]
       val y = reifyEffects{
-        val Some(fn) = cont2fun[Rep](cont)
-        fn(x)
+        apply_cont[Rep](cont, x)
       }
       reflectEffect(AppRep(f, args, x, y))
   }
