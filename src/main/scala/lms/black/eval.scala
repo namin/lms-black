@@ -356,26 +356,20 @@ object eval {
           apply_lifted_cont[R1](ev.convert(or._car(kv)), v)
         }}))
     }
-    if (!inRep) {
+    val f = if (!inRep) {
       trait Program extends EvalDsl {
-        val or: Ops[Rep] = OpsRep
         def snippet(kv: Rep[Value]): Rep[Value] =
           eval_body[Rep](kv)(OpsRep)
       }
       val r = new EvalDslDriver with Program
       r.precompile
-      apply_cont[R](cont, _lift(evalfun(r.f)))
+      _lift(evalfun(r.f))
     } else {
-      val f = _fun(new Fun[R] {
-        def fun[RF[_]:Ops](implicit ev0: Convert[R,RF]) = {
-          ((kv0: R[Value]) => {
-            val kv = ev0.convert(kv0)
-            eval_body(kv)
-          })
-        }
-      })
-      apply_cont[R](cont, f)
+      _fun(new Fun[R] { def fun[RF[_]:Ops](implicit ev0: Convert[R,RF]) = { ((kv0: R[Value]) => { val kv = ev0.convert(kv0)
+        eval_body[RF](kv)
+      })}})
     }
+    apply_cont[R](cont, f)
   }
 
   def eval_let_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
