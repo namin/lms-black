@@ -348,16 +348,19 @@ object eval {
     val (params, body) = exp match {
       case P(_, P(params, body)) => (params, body)
     }
+    def eval_body[RF[_]:Ops](kv: RF[Value]): RF[Value] = {
+      val or = implicitly[Ops[RF]]
+      meta_apply[RF](m, S("eval-begin"), body,
+        env_extend[RF](env, params, Code(or._cdr(kv))),
+        or._cont(new FunC[RF] {def fun[R1[_]:Ops](implicit ev: Convert[RF,R1]) = { v =>
+          apply_lifted_cont[R1](ev.convert(or._car(kv)), v)
+        }}))
+    }
     if (!inRep) {
       trait Program extends EvalDsl {
         val or: Ops[Rep] = OpsRep
-        def snippet(kv: Rep[Value]): Rep[Value] = {
-          meta_apply[Rep](m, S("eval-begin"), body,
-            env_extend[Rep](env, params, Code(or._cdr(kv))),
-            or._cont(new FunC[Rep] {def fun[R1[_]:Ops](implicit ev: Convert[Rep,R1]) = {v =>
-              apply_lifted_cont[R1](ev.convert(or._car(kv)), v)
-            }}))
-        }
+        def snippet(kv: Rep[Value]): Rep[Value] =
+          eval_body[Rep](kv)(OpsRep)
       }
       val r = new EvalDslDriver with Program
       r.precompile
@@ -365,14 +368,9 @@ object eval {
     } else {
       val f = _fun(new Fun[R] {
         def fun[RF[_]:Ops](implicit ev0: Convert[R,RF]) = {
-          val or = implicitly[Ops[RF]]
           ((kv0: R[Value]) => {
             val kv = ev0.convert(kv0)
-            meta_apply[RF](m, S("eval-begin"), body,
-              env_extend[RF](env, params, Code(or._cdr(kv))),
-              or._cont(new FunC[RF] {def fun[R1[_]:Ops](implicit ev: Convert[RF,R1]) = { v =>
-                apply_lifted_cont[R1](ev.convert(or._car(kv)), v)
-              }}))
+            eval_body(kv)
           })
         }
       })
