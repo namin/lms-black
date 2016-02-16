@@ -130,6 +130,8 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
     def unapply(cid: String) = cells.get(cid)
   }
   def app_rep(f: Rep[Value], args: Rep[Value], cont: Value): Rep[Value] = (f, args) match {
+    case (Const(Prim("car")), Const(P(P(a, _), N))) =>
+      apply_cont[Rep](cont, OpsRep._lift(a))
     case (Const(fprim@Prim(p)), Const(vs@P(_, _))) if !effectful_primitives.contains(fprim) && !hasCode(vs) =>
       val r = apply_primitive(p, vs)
       apply_cont[Rep](cont, OpsRep._lift(r))
