@@ -343,6 +343,13 @@ object eval {
       apply_cont[R](mcont, eval_clambda[R](m, exp, env, cont))
     }
   }
+
+  def unlift_cont[R[_]:Ops](k: => R[Value]): Value = {
+    val o = implicitly[Ops[R]]
+    o._cont(new FunC[R] {def fun[R1[_]:Ops](implicit ev: Convert[R,R1]) = { v =>
+      apply_lifted_cont[R1](ev.convert(k), v)
+    }})
+  }
   def eval_clambda[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     val (params, body) = exp match {
@@ -350,11 +357,11 @@ object eval {
     }
     def eval_body[RF[_]:Ops](kv: RF[Value]): RF[Value] = {
       val or = implicitly[Ops[RF]]
+      val args = or._cdr(kv)
+      lazy val k = or._car(kv)
       meta_apply[RF](m, S("eval-begin"), body,
-        env_extend[RF](env, params, Code(or._cdr(kv))),
-        or._cont(new FunC[RF] {def fun[R1[_]:Ops](implicit ev: Convert[RF,R1]) = { v =>
-          apply_lifted_cont[R1](ev.convert(or._car(kv)), v)
-        }}))
+        env_extend[RF](env, params, Code(args)),
+        unlift_cont[RF](k))
     }
     val f = if (!inRep) {
       trait Program extends EvalDsl {
