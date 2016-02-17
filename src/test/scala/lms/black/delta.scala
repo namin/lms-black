@@ -52,7 +52,7 @@ class TestDelta extends TestSuite with BeforeAndAfter {
           (operand (cdr e)))
       (let ((delta-params (car (cdr operator)))
             (delta-body (cdr (cdr operator))))
-        ((EM eval-begin)
+        (eval-begin
          delta-body
          (extend _env delta-params (list operand r k))
          id-cont)))))
