@@ -223,8 +223,8 @@ object eval {
   def meta_apply[R[_]:Ops](m: MEnv, s: Value, exp: Value, env: Value, cont: Value): R[Value] = {
     val MEnv(meta_env, meta_menv) = m
     val o = implicitly[Ops[R]]; import o._
-    val (c, fun) = env_get(meta_env, s) match {
-      case c@Cell(_) => (c, cell_read(c))
+    val fun = env_get(meta_env, s) match {
+      case c@Cell(_) => cell_read(c)
     }
     val args = P(exp, P(env, P(cont, N)))
     static_apply[R](fun, args, id_cont[R])
