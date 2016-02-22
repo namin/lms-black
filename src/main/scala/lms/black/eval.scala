@@ -498,7 +498,9 @@ object eval {
   def make_pairs[R[_]:Ops](ks: Value, vs: Value): Value = (ks, vs) match {
     case (N, N) => N
     case (N, Code(_)) => N
-    case (S(s), _) => cons(cons(ks, vs), N)
+    case (S(s), _) =>
+      val o = implicitly[Ops[R]]
+      cons(cons(ks, o._unlift(o._cell_new(o._lift(vs), s))), N)
     case (P(k@S(s), ks), P(v, vs)) =>
       val o = implicitly[Ops[R]]
       cons(cons(k, o._unlift(o._cell_new(o._lift(v), s))), make_pairs[R](ks, vs))
