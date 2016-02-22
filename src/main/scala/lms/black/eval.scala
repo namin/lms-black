@@ -5,6 +5,7 @@ import language.implicitConversions
 
 object eval {
   sealed trait Value
+  case object Undefined extends Value
   case class I(n: Int) extends Value
   case class B(b: Boolean) extends Value
   case class S(sym: String) extends Value {
@@ -446,17 +447,20 @@ object eval {
       apply_cont[R](mcont, eval_define[R](m, exp, env, cont))
     }
   }
+
   def eval_define[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
-    val o = implicitly[Ops[R]]
+    val o = implicitly[Ops[R]]; import o._
     val (name, body) = exp match {
       case P(_, P(name@S(_), P(body, N))) => (name, body)
     }
+    val (c, frame) = env match {
+      case P(c@Cell(key), _) => (c, cells(key))
+    }
+    val cv = _cell_new(_lift(Undefined), name.sym)
+    _cell_set(_lift(c), _cons(_cons(name, cv), frame))
     meta_apply[R](m, S("base-eval"), body, env, o._cont(new FunC[R] { def fun[R1[_]:Ops](implicit ev: Convert[R,R1]) = { v =>
-      val (c, frame) = env match {
-        case P(c@Cell(key), _) => (c, cells(key))
-      }
       val o1 = implicitly[Ops[R1]]; import o1._
-      _cell_set(_lift(c), _cons(_cons(name, _cell_new(v, name.sym)), frame))
+      _cell_set(ev.convert(cv), v)
       apply_cont[R1](cont, name)
     }}))
   }

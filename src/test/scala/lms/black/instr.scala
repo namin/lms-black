@@ -13,9 +13,7 @@ class TestInstr extends TestSuite with BeforeAndAfter {
   }
 
   def eval_instr = """(begin
-(define map (lambda (f xs) 'TODO))
-
-(set! map
+(define map
   (lambda (f xs)
     (if (null? xs)
         '()
