@@ -36,8 +36,7 @@ class TestTaba extends TestSuite with BeforeAndAfter {
             (add! ans-args ans)
             (cont ans))))))))
 
-(define map (lambda (f xs) 'TODO))
-(set! map
+(define map
   (lambda (f xs)
     (if (null? xs)
         '()
@@ -72,8 +71,7 @@ class TestTaba extends TestSuite with BeforeAndAfter {
 )"""
 
   def cnv = """(begin
-(define zip (lambda (xs ys) 'TODO))
-(set! zip
+(define zip
   (lambda (xs ys)
     (if (if (null? xs) #t (null? ys))
        '()
@@ -81,8 +79,7 @@ class TestTaba extends TestSuite with BeforeAndAfter {
         (cons (car xs) (car ys))
         (zip (cdr xs) (cdr ys))))))
 
-(define walk (lambda (xs ys) 'TODO))
-(set! walk
+(define walk
   (lambda (xs ys)
      (if (null? xs)
          (cons '() ys)

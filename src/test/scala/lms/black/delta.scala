@@ -34,8 +34,6 @@ class TestDelta extends TestSuite with BeforeAndAfter {
   (lambda (v) v))
 
 (define make-pairs
-  (lambda (ks vs) 'TODO))
-(set! make-pairs
   (lambda (ks vs)
       (if (null? ks) '()
           (if (null? vs) '()
