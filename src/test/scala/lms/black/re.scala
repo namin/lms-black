@@ -47,4 +47,88 @@ class TestRe extends TestSuite with BeforeAndAfter {
         suffix = "txt")
     }
   }
+
+  // translated from
+  // http://www.cs.princeton.edu/courses/archive/spr09/cos333/beautiful.html
+  def matches_bis = """(begin
+(define match (lambda (r) 'TODO))
+(define match_here (lambda (r) 'TODO))
+(define match_star (lambda (r) 'TODO))
+
+(define match_loop (lambda (m) (lambda (s)
+  (if (m s)
+      #t
+      (if (null? s)
+          #f
+         ((match_loop m) (cdr s)))))))
+(set! match (lambda (r)
+  (if (null? r) (lambda (s) #t)
+      (if (eq? '^ (car r))
+          (match_here (cdr r))
+          (match_loop (match_here r))))))
+
+(set! match_here (lambda (r)
+  (if (null? r) (lambda (s) #t)
+  (let ((m (if (eq? '_ (car r))
+               (lambda (s) (if (null? s) #f ((match_here (cdr r)) (cdr s))))
+               (lambda (s) (if (null? s) #f
+                          (if (eq? (car r) (car s))
+                              ((match_here (cdr r)) (cdr s))
+                              #f))))))
+    (if (null? (cdr r))
+        (if (eq? '$ (car r))
+            (lambda (s) (null? s))
+            m)
+    (if (eq? '* (car (cdr r)))
+        (match_star (car r) (cdr (cdr r)))
+        m))))))
+
+(define star_loop (lambda (m c) (lambda (s)
+  (if (m s)
+      #t
+      (if (null? s)
+          #f
+          (if (eq? '_ c)
+              ((star_loop m c) (cdr s))
+              (if (eq? c (car s))
+                 ((star_loop m c) (cdr s))
+                 #f)))))))
+
+(set! match_star (lambda (c r)
+  (star_loop (match_here r) c)))
+)
+"""
+
+  def go(c: Boolean) = {
+    ev(if (c) matches_bis.replace("lambda", "clambda") else matches_bis)
+    def to_list(s: String) = s.mkString("'(", " ", ")")
+    def testmatch(r: String, s: String, o: Boolean) = {
+      val qr = to_list(r)
+      val qs = to_list(s)
+      assertResult(B(o)){ev(s"((match $qr) $qs)")}
+    }
+    testmatch("^hello$", "hello", true)
+    testmatch("^hello$", "hell", false)
+    testmatch("hell", "hello", true);
+    testmatch("hell", "hell", true);
+    testmatch("hel*", "he", true);
+    testmatch("hel*$", "hello", false);
+    testmatch("hel*", "yo hello", true);
+    testmatch("ab", "hello ab hello", true);
+    testmatch("^ab", "hello ab hello", false);
+    testmatch("a*b", "hello aab hello", true);
+    testmatch("^ab*", "abcd", true);
+    testmatch("^ab*", "a", true);
+    testmatch("^ab*", "ac", true);
+    testmatch("^ab*", "bac", false);
+    testmatch("^ab*$", "ac", false);
+  }
+
+  test("matches bis (interpreted)") {
+    go(false)
+  }
+
+  test("matches bis (compiled)") {
+    go(true)
+  }
 }
