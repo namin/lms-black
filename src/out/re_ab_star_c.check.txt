@@ -1,0 +1,33 @@
+{(k, xs) =>
+  _app(_cell_read(<cell match_loop>), _cons(_car(_cons(_fun{kxs_1 =>
+    _app(`null?, _cons(_car(_cdr(kxs_1)), `()), _cont{v_2 =>
+      _if(_true(v_2),
+      _app(_car(kxs_1), `(#f), _cont{v_3 =>
+        v_3}),
+      _app(`car, _cons(_car(_cdr(kxs_1)), `()), _cont{v_4 =>
+        _app(`eq?, _cons(`a, _cons(v_4, `())), _cont{v_5 =>
+          _if(_true(v_5),
+          _app(_cell_read(<cell star_loop>), _cons(_car(_cons(_fun{kxs_35 =>
+            _app(`null?, _cons(_car(_cdr(kxs_35)), `()), _cont{v_36 =>
+              _if(_true(v_36),
+              _app(_car(kxs_35), `(#f), _cont{v_37 =>
+                v_37}),
+              _app(`car, _cons(_car(_cdr(kxs_35)), `()), _cont{v_38 =>
+                _app(`eq?, _cons(`c, _cons(v_38, `())), _cont{v_39 =>
+                  _if(_true(v_39),
+                  _app(`cdr, _cons(_car(_cdr(kxs_35)), `()), _cont{v_42 =>
+                    _app(_fun{kxs_40 =>
+                      _app(_car(kxs_40), `(#t), _cont{v_41 =>
+                        v_41})}, _cons(v_42, `()), _cont{v_43 =>
+                      _app(_car(kxs_35), _cons(v_43, `()), _cont{v_44 =>
+                        v_44})})}),
+                  _app(_car(kxs_35), `(#f), _cont{v_45 =>
+                    v_45}))})}))})}, `())), `(b)), _cont{v_46 =>
+            _app(`cdr, _cons(_car(_cdr(kxs_1)), `()), _cont{v_47 =>
+              _app(v_46, _cons(v_47, `()), _cont{v_48 =>
+                _app(_car(kxs_1), _cons(v_48, `()), _cont{v_49 =>
+                  v_49})})})}),
+          _app(_car(kxs_1), `(#f), _cont{v_50 =>
+            v_50}))})}))})}, `())), `()), _cont{v_51 =>
+    _app(k, _cons(v_51, `()), _cont{v_52 =>
+      v_52})})}

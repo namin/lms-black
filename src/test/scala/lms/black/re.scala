@@ -106,6 +106,9 @@ class TestRe extends TestSuite with BeforeAndAfter {
       val qr = to_list(r)
       val qs = to_list(s)
       assertResult(B(o)){ev(s"((match $qr) $qs)")}
+      if (c) {
+        assertResult(B(o)){ev(s"(((clambda () (match $qr))) $qs)")}
+      }
     }
     testmatch("^hello$", "hello", true)
     testmatch("^hello$", "hell", false)
@@ -130,5 +133,14 @@ class TestRe extends TestSuite with BeforeAndAfter {
 
   test("matches bis (compiled)") {
     go(true)
+    val kv = Map(
+      "start_ab_bis" -> ev("(clambda () (match '(^ a b)))").asInstanceOf[Evalfun],
+      "ab_star_c" -> ev("(clambda () (match '(a b * c)))").asInstanceOf[Evalfun]
+    )
+    for ((k, v) <- kv) {
+      checkOut(k,
+        println(printer.summarize(v)),
+        suffix = "txt")
+    }
   }
 }
