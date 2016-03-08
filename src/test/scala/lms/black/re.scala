@@ -17,10 +17,10 @@ class TestRe extends TestSuite with BeforeAndAfter {
 """
 
   def matches = """(begin
-(define matches (lambda (r)
-  (if (null? r) (lambda (s) #t)
-    (lambda (s) (if (null? s) #f
-           (if (eq? (car r) (car s)) ((matches (cdr r)) (cdr s)) #f))))))
+(define matches (lambda (r) (lambda (s)
+  (if (null? r) #t
+    (if (null? s) #f
+      (if (eq? (car r) (car s)) ((matches (cdr r)) (cdr s)) #f))))))
 )
 """
 
