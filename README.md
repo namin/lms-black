@@ -27,3 +27,10 @@ Running this compiled `fib` function has the same behavior as an uncompiled
 `fib` function evaluated by the modified interpreter. Still, once we undo
 the modifications to the interpreter, the previously compiled `fib` function
 will still update the counter.
+
+## Running
+
+* `sbt test`
+   runs the test suite.
+* `sbt console`
+   opens a Scala REPL with the system already imported. Then, use `ev` to evaluate Black terms, like in the tests, e.g. `ev("(+ 1 1)")`.
