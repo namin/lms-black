@@ -18,7 +18,7 @@ trait EvalDsl extends IfThenElse with LiftBoolean {
   def cell_new_rep(v: Rep[Value], s: String): Rep[Value]
   def cell_read_rep(c: Rep[Value]): Rep[Value]
   def cell_set_rep(c: Rep[Value], v: Rep[Value]): Rep[Value]
-  implicit object OpsRep extends scala.Serializable with Ops[Rep] {
+  implicit object OpsRep extends Ops[Rep] {
     type Tag[A] = Typ[A]
     def valueTag = valTyp
     def _lift(v: Value) = v match {
