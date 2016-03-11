@@ -88,6 +88,39 @@ class TestRe extends TestSuite with BeforeAndAfter {
       suffix = "txt")
   }
 
+
+  test("matches (interpreted) with var counting for s") {
+    ev(var_counter.replace("'r", "'s"))
+    ev(list)
+    ev(matches)
+    assertResult(B(false)){ev("((matches '(a b)) '(a c))")}
+    assertResult(I(5)){ev("(EM counter)")}
+    ev("(EM (set! counter 0))")
+    assertResult(B(true)){ev("((matches '(a b)) '(a b))")}
+    assertResult(I(6)){ev("(EM counter)")}
+    ev("(EM (set! counter 0))")
+    assertResult(B(true)){ev("((matches '(a b)) '(a b c))")}
+    assertResult(I(6)){ev("(EM counter)")}
+  }
+
+  test("matches (compiled) with var counting for s") {
+    ev(var_counter.replace("'r", "'s"))
+    ev(list)
+    ev(matches.replace("lambda", "clambda"))
+    assertResult(B(false)){ev("((matches '(a b)) '(a c))")}
+    assertResult(I(5)){ev("(EM counter)")}
+    ev("(EM (set! counter 0))")
+    assertResult(B(true)){ev("((matches '(a b)) '(a b))")}
+    assertResult(I(6)){ev("(EM counter)")}
+    ev("(EM (set! counter 0))")
+    assertResult(B(true)){ev("((matches '(a b)) '(a b c))")}
+    assertResult(I(6)){ev("(EM counter)")}
+    val f = ev("(clambda () (matches '(a b)))").asInstanceOf[Evalfun]
+    checkOut("start_ab_var_counting_s",
+      println(printer.summarize(f)),
+      suffix = "txt")
+  }
+
   // translated from
   // http://www.cs.princeton.edu/courses/archive/spr09/cos333/beautiful.html
   def matches_bis = """(begin
