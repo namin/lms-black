@@ -24,6 +24,14 @@ class TestRe extends TestSuite with BeforeAndAfter {
 )
 """
 
+  def var_counter = """(EM (begin
+(define counter 0)
+(define old-eval-var eval-var)
+(set! eval-var (clambda (e r k)
+  (if (eq? e 'r) (set! counter (+ counter 1)) 0)
+  (old-eval-var e r k)))
+))"""
+
   test("matches (interpreted)") {
     ev(list)
     ev(matches)
@@ -46,6 +54,38 @@ class TestRe extends TestSuite with BeforeAndAfter {
         println(printer.summarize(f)),
         suffix = "txt")
     }
+  }
+
+  test("matches (interpreted) with var counting") {
+    ev(var_counter)
+    ev(list)
+    ev(matches)
+    assertResult(B(false)){ev("((matches '(a b)) '(a c))")}
+    assertResult(I(5)){ev("(EM counter)")}
+    ev("(EM (set! counter 0))")
+    assertResult(B(true)){ev("((matches '(a b)) '(a b))")}
+    assertResult(I(7)){ev("(EM counter)")}
+    ev("(EM (set! counter 0))")
+    assertResult(B(true)){ev("((matches '(a b)) '(a b c))")}
+    assertResult(I(7)){ev("(EM counter)")}
+  }
+
+  test("matches (compiled) with var counting") {
+    ev(var_counter)
+    ev(list)
+    ev(matches.replace("lambda", "clambda"))
+    assertResult(B(false)){ev("((matches '(a b)) '(a c))")}
+    assertResult(I(5)){ev("(EM counter)")}
+    ev("(EM (set! counter 0))")
+    assertResult(B(true)){ev("((matches '(a b)) '(a b))")}
+    assertResult(I(7)){ev("(EM counter)")}
+    ev("(EM (set! counter 0))")
+    assertResult(B(true)){ev("((matches '(a b)) '(a b c))")}
+    assertResult(I(7)){ev("(EM counter)")}
+    val f = ev("(clambda () (matches '(a b)))").asInstanceOf[Evalfun]
+    checkOut("start_ab_var_counting",
+      println(printer.summarize(f)),
+      suffix = "txt")
   }
 
   // translated from

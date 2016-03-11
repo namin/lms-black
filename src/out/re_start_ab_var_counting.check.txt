@@ -1,0 +1,45 @@
+{(k, xs) =>
+  _app(k, _cons(_fun{kxs_1 =>
+    _app(`+, _cons(_cell_read(<cell counter>), `(1)), _cont{v_2 =>
+      _cell_set(<cell counter>, v_2)
+      _app(`null?, _cons(_car(_cdr(kxs_1)), `()), _cont{v_3 =>
+        _if(_true(v_3),
+        _app(_car(kxs_1), `(#f), _cont{v_4 =>
+          v_4}),
+        _app(`+, _cons(_cell_read(<cell counter>), `(1)), _cont{v_5 =>
+          _cell_set(<cell counter>, v_5)
+          _app(`car, _cons(_car(_cdr(kxs_1)), `()), _cont{v_6 =>
+            _app(`eq?, _cons(`a, _cons(v_6, `())), _cont{v_7 =>
+              _if(_true(v_7),
+              _app(`+, _cons(_cell_read(<cell counter>), `(1)), _cont{v_8 =>
+                _cell_set(<cell counter>, v_8)
+                _app(`cdr, _cons(_car(_cdr(kxs_1)), `()), _cont{v_24 =>
+                  _app(_fun{kxs_9 =>
+                    _app(`+, _cons(_cell_read(<cell counter>), `(1)), _cont{v_10 =>
+                      _cell_set(<cell counter>, v_10)
+                      _app(`null?, _cons(_car(_cdr(kxs_9)), `()), _cont{v_11 =>
+                        _if(_true(v_11),
+                        _app(_car(kxs_9), `(#f), _cont{v_12 =>
+                          v_12}),
+                        _app(`+, _cons(_cell_read(<cell counter>), `(1)), _cont{v_13 =>
+                          _cell_set(<cell counter>, v_13)
+                          _app(`car, _cons(_car(_cdr(kxs_9)), `()), _cont{v_14 =>
+                            _app(`eq?, _cons(`b, _cons(v_14, `())), _cont{v_15 =>
+                              _if(_true(v_15),
+                              _app(`+, _cons(_cell_read(<cell counter>), `(1)), _cont{v_16 =>
+                                _cell_set(<cell counter>, v_16)
+                                _app(`cdr, _cons(_car(_cdr(kxs_9)), `()), _cont{v_20 =>
+                                  _app(_fun{kxs_17 =>
+                                    _app(`+, _cons(_cell_read(<cell counter>), `(1)), _cont{v_18 =>
+                                      _cell_set(<cell counter>, v_18)
+                                      _app(_car(kxs_17), `(#t), _cont{v_19 =>
+                                        v_19})})}, _cons(v_20, `()), _cont{v_21 =>
+                                    _app(_car(kxs_9), _cons(v_21, `()), _cont{v_22 =>
+                                      v_22})})})}),
+                              _app(_car(kxs_9), `(#f), _cont{v_23 =>
+                                v_23}))})})}))})})}, _cons(v_24, `()), _cont{v_25 =>
+                    _app(_car(kxs_1), _cons(v_25, `()), _cont{v_26 =>
+                      v_26})})})}),
+              _app(_car(kxs_1), `(#f), _cont{v_27 =>
+                v_27}))})})}))})})}, `()), _cont{v_28 =>
+    v_28})}
