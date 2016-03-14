@@ -7,12 +7,10 @@ object printer {
   var id_count = 0
   var pending: List[String] = Nil
   implicit object OpsPrinter extends Ops[PrintRep] {
-    type Tag[A] = Unit
     def freshSuffix: String = {
       id_count += 1
       s"_$id_count"
     }
-    def valueTag = ()
     def _lift(v: Value) = v match {
       case Cell(key) => s"<cell $key>"
       case Code(c: String) => c
@@ -23,7 +21,7 @@ object printer {
     def _app(fun: String, args: String, cont: Value) =
       s"_app($fun, $args, ${_lift(cont)})"
     def _true(v: String) = s"_true($v)"
-    def _if[A:Tag](cond: String, thenp: => String, elsep: => String) =
+    def _if(cond: String, thenp: => String, elsep: => String) =
       s"_if($cond,\n$thenp,\n$elsep)"
     def _fun(f: Fun[PrintRep]) = {
       val fn = f.fun[PrintRep]

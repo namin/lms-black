@@ -10,7 +10,7 @@ trait EvalDsl extends IfThenElse with LiftBoolean {
   def app_rep(f: Rep[Value], args: Rep[Value], cont: Value): Rep[Value]
   def fun_rep(f: Fun[Rep]): Rep[Value]
   def cont_rep(c: CodeCont[Rep], k: FunC[Rep]): Rep[Value]
-  def if_rep[A:Typ](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A]
+  def if_rep(cond: Rep[Boolean], thenp: => Rep[Value], elsep: => Rep[Value]): Rep[Value]
   def car_rep(p: Rep[Value]): Rep[Value]
   def cdr_rep(p: Rep[Value]): Rep[Value]
   def cons_rep(car: Rep[Value], cdr: Rep[Value]): Rep[Value]
@@ -19,8 +19,6 @@ trait EvalDsl extends IfThenElse with LiftBoolean {
   def cell_read_rep(c: Rep[Value]): Rep[Value]
   def cell_set_rep(c: Rep[Value], v: Rep[Value]): Rep[Value]
   implicit object OpsRep extends Ops[Rep] {
-    type Tag[A] = Typ[A]
-    def valueTag = valTyp
     def _lift(v: Value) = v match {
       case Code(r: Rep[Value]) => r
       case _ => unit(v)
@@ -29,7 +27,7 @@ trait EvalDsl extends IfThenElse with LiftBoolean {
     def _unlift(v: Rep[Value]) = unlift_rep(v)
     def _app(f: Rep[Value], args: Rep[Value], cont: Value) = app_rep(f, args, cont)
     def _true(v: Rep[Value]): Rep[Boolean] = true_rep(v)
-    def _if[A:Tag](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]): Rep[A] = if_rep(cond, thenp, elsep)
+    def _if(cond: Rep[Boolean], thenp: => Rep[Value], elsep: => Rep[Value]) = if_rep(cond, thenp, elsep)
     def _fun(f: Fun[Rep]) = fun_rep(f)
     def _cont(f: FunC[Rep]) = {
       lazy val k: CodeCont[Rep] = CodeCont[Rep](f, () => cont_rep(k, f))
@@ -100,7 +98,7 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
     case _ => CdrRep(p)
   }
 
-  def if_rep[A:Typ](cond: Rep[Boolean], thenp: => Rep[A], elsep: => Rep[A]) = cond match {
+  def if_rep(cond: Rep[Boolean], thenp: => Rep[Value], elsep: => Rep[Value]) = cond match {
     case Const(true) => thenp
     case Const(false) => elsep
     case _ => if (cond) thenp else elsep
@@ -300,7 +298,7 @@ trait EvalDslGen extends ScalaGenIfThenElse {
       stream.println("}, {")
       emitBlock(b)
       stream.println(quoteL(getBlockResult(b)))
-      stream.println("})("+quoteO+".valueTag)")
+      stream.println("})")
     case _ => super.emitNode(sym, rhs)
   }
 }

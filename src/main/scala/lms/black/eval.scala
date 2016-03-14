@@ -124,14 +124,12 @@ object eval {
     def convertb(v: R1[Boolean]) = ev23.convertb(ev12.convertb(v))
   }
   trait Ops[R[_]] {
-    type Tag[A]
-    implicit def valueTag: Tag[Value]
     implicit def _lift(v: Value): R[Value]
     def _liftb(b: Boolean): R[Boolean]
     def _unlift(v: R[Value]): Value
     def _app(fun: R[Value], args: R[Value], cont: Value): R[Value]
     def _true(v: R[Value]): R[Boolean]
-    def _if[A:Tag](cond: R[Boolean], thenp: => R[A], elsep: => R[A]): R[A]
+    def _if(cond: R[Boolean], thenp: => R[Value], elsep: => R[Value]): R[Value]
     def _fun(f: Fun[R]): R[Value]
     def _cont(f: FunC[R]): Value
     def _cons(car: R[Value], cdr: R[Value]): R[Value]
@@ -144,8 +142,6 @@ object eval {
   }
   type NoRep[A] = A
   implicit object OpsNoRep extends Ops[NoRep] {
-    type Tag[A] = Unit
-    def valueTag = ()
     def _lift(v: Value) = v
     def _liftb(b: Boolean) = b
     def _unlift(v: Value) = v
@@ -153,7 +149,7 @@ object eval {
     def _true(v: Value) = v match {
       case B(b) => b
     }
-    def _if[A:Tag](cond: Boolean, thenp: => A, elsep: => A): A = if (cond) thenp else elsep
+    def _if(cond: Boolean, thenp: => Value, elsep: => Value) = if (cond) thenp else elsep
     def _fun(f: Fun[NoRep]) = evalfun(f)
     def _cont(f: FunC[NoRep]) = contfun(f)
     def _cons(car: Value, cdr: Value) = cons(car, cdr)

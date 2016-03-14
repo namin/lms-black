@@ -76,7 +76,7 @@ class staged$0 extends Fun[NoRep] with (Value => Value) {
           }})
           )
           x42
-        })(o1.valueTag)
+        })
         x44: R1[Value]
     }})
     )
