@@ -4,8 +4,10 @@ import eval._
 import scala.lms.common._
 
 trait EvalDsl extends IfThenElse with LiftBoolean {
-  implicit def valTyp: Typ[Value]
-  implicit def boolTyp: Typ[Boolean]
+  // for LMS 1.0.0-SNAPSHOT as of March 15, 2016
+  //implicit def valTyp: Typ[Value]
+  //implicit def boolTyp: Typ[Boolean]
+
   def unlift_rep(v: Rep[Value]): Value
   def app_rep(f: Rep[Value], args: Rep[Value], cont: Value): Rep[Value]
   def fun_rep(f: Fun[Rep]): Rep[Value]
@@ -46,9 +48,13 @@ trait EvalDsl extends IfThenElse with LiftBoolean {
 }
 
 trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
-  implicit def valTyp: Typ[Value] = manifestTyp
-  implicit def boolTyp: Typ[Boolean] = manifestTyp
-  implicit def stringTyp: Typ[String] = manifestTyp
+  // for LMS 0.9.0
+  type Typ[A] = Manifest[A]
+  def typ[A:Manifest] = implicitly[Manifest[A]]
+  // for LMS 1.0.0-SNAPSHOT as of March 15, 2016
+  //implicit def valTyp: Typ[Value] = manifestTyp
+  //implicit def boolTyp: Typ[Boolean] = manifestTyp
+  //implicit def stringTyp: Typ[String] = manifestTyp
 
   case class CarRep(p: Rep[Value]) extends Def[Value]
   case class CdrRep(p: Rep[Value]) extends Def[Value]
