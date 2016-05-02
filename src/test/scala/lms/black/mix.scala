@@ -45,6 +45,22 @@ class TestMix extends TestSuite with BeforeAndAfter {
     assertResult(I(if (compile) 3 else 4)){ev("(t3)")}
     ev("(u3)")
     assertResult(I(if (compile) 3 else 6)){ev("(t3)")}
+
+    // Currently, we over-optimize cell reads only in
+    // _direct_ function application position.
+    // Hence,  (f 2) does get optimized, while ((car fs) 2) does not.
+    val t1_nopt = """{(k, xs) =>
+_app(`car, _cons(_cell_read(<cell fs>), `()), _cont{v_1 =>
+_app(v_1, `(2), _cont{v_2 =>
+_app(k, _cons(v_2, `()), _cont{v_3 =>
+v_3})})})}"""
+    val t_opt = "{(k, xs) =>_app(k, `(3), _cont{v_1 =>v_1})}"
+    if (compile) {
+      if (over_opt) assertResult(t_opt){printer.summarize(ev("t1")).replace("\n", "")}
+      else assertResult(t1_nopt){printer.summarize(ev("t1"))}
+      assertResult(t_opt){printer.summarize(ev("t2")).replace("\n", "")}
+      assertResult(t_opt){printer.summarize(ev("t3")).replace("\n", "")}
+    }
   }
 
   val opt = ({f: String => f}, "fs")
