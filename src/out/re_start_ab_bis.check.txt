@@ -1,5 +1,5 @@
 {(k, xs) =>
-  _app(k, _cons(_car(_cons(_fun{kxs_1 =>
+  _app(k, _cons(_fun{kxs_1 =>
     _app(`null?, _cons(_car(_cdr(kxs_1)), `()), _cont{v_2 =>
       _if(_true(v_2),
       _app(_car(kxs_1), `(#f), _cont{v_3 =>
@@ -8,7 +8,7 @@
         _app(`eq?, _cons(`a, _cons(v_4, `())), _cont{v_5 =>
           _if(_true(v_5),
           _app(`cdr, _cons(_car(_cdr(kxs_1)), `()), _cont{v_17 =>
-            _app(_car(_cons(_fun{kxs_6 =>
+            _app(_fun{kxs_6 =>
               _app(`null?, _cons(_car(_cdr(kxs_6)), `()), _cont{v_7 =>
                 _if(_true(v_7),
                 _app(_car(kxs_6), `(#f), _cont{v_8 =>
@@ -23,9 +23,9 @@
                         _app(_car(kxs_6), _cons(v_14, `()), _cont{v_15 =>
                           v_15})})}),
                     _app(_car(kxs_6), `(#f), _cont{v_16 =>
-                      v_16}))})}))})}, `())), _cons(v_17, `()), _cont{v_18 =>
+                      v_16}))})}))})}, _cons(v_17, `()), _cont{v_18 =>
               _app(_car(kxs_1), _cons(v_18, `()), _cont{v_19 =>
                 v_19})})}),
           _app(_car(kxs_1), `(#f), _cont{v_20 =>
-            v_20}))})}))})}, `())), `()), _cont{v_21 =>
+            v_20}))})}))})}, `()), _cont{v_21 =>
     v_21})}

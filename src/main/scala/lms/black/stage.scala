@@ -97,10 +97,12 @@ trait EvalDslExp extends EvalDsl with EffectExp with IfThenElseExp {
 
   def car_rep(p: Rep[Value]) = p match {
     case Const(P(a, b)) => OpsRep._lift(a)
+    case Def(ConsRep(a, _)) => a
     case _ => CarRep(p)
   }
   def cdr_rep(p: Rep[Value]) = p match {
     case Const(P(a, b)) => OpsRep._lift(b)
+    case Def(ConsRep(_, b)) => b
     case _ => CdrRep(p)
   }
 
