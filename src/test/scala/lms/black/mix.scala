@@ -12,23 +12,53 @@ class TestMix extends TestSuite with BeforeAndAfter {
     clean()
   }
 
-  test("mix dynamic and static") {
-    ev("(define funlst (cons (clambda (x) (+ x 1)) '()))")
-    ev("(define fa1 (clambda () ((car funlst) 2)))")
-    ev("(define fa2 (let ((fs funlst)) (clambda () ((car fs) 2))))")
-    ev("(define fb (clambda (fs) ((car fs) 2)))")
-    ev("(define fc1 (clambda () (fb funlst)))")
-    ev("(define fc2 (let ((fs funlst)) (clambda () (fb fs))))")
-    assertResult(I(3)){ev("(fa1)")}
-    assertResult(I(3)){ev("(fa2)")}
-    assertResult(I(3)){ev("(fb funlst)")}
-    assertResult(I(3)){ev("(fc1)")}
-    assertResult(I(3)){ev("(fc2)")}
-    ev("(set! funlst (cons (clambda (x) (+ x 2)) '()))")
-    assertResult(I(4)){ev("(fa1)")}
-    assertResult(I(3)){ev("(fa2)")}
-    assertResult(I(4)){ev("(fb funlst)")}
-    assertResult(I(4)){ev("(fc1)")}
-    assertResult(I(3)){ev("(fc2)")}
+  def go(compile: Boolean, mk_fs: String => String, f: String) = {
+    val over_opt = compile && (f=="fs")
+    val lambda = (if (compile) "c" else "")+"lambda"
+    ev(s"(define fs ${mk_fs(s"($lambda (x) (+ x 1))")})")
+    ev(s"(define t1 ($lambda () ($f 2)))")
+    assertResult(I(3)){ev("(t1)")}
+    ev(s"""
+(define t2
+  (let ((f $f))
+    ($lambda () (f 2))))
+""")
+    assertResult(I(3)){ev("(t2)")}
+    ev(s"""
+(define p3
+  (let ((f $f))
+    (cons (lambda () (f 2))
+          (lambda ()
+            (let ((old_f f))
+              (set! f (lambda (x) (old_f (old_f x)))))))))
+""")
+    ev("(define t3 (car p3))")
+    ev("(define u3 (cdr p3))")
+    assertResult(I(3)){ev("(t3)")}
+
+    ev(s"(set! fs ${mk_fs(s"($lambda (x) (+ x 2))")})")
+    assertResult(I(if (over_opt) 3 else 4)){ev("(t1)")}
+    assertResult(I(3)){ev("(t2)")}
+    assertResult(I(3)){ev("(t3)")}
+
+    ev("(u3)")
+    assertResult(I(4)){ev("(t3)")}
+    ev("(u3)")
+    assertResult(I(6)){ev("(t3)")}
+  }
+
+  val opt = ({f: String => f}, "fs")
+  val wrap = ({f: String => s"(cons $f '())"}, "(car fs)")
+  test("mix (uncompiled opt fun)") {
+    go(false, opt._1, opt._2)
+  }
+  test("mix (uncompiled wrap fun)") {
+    go(false, wrap._1, wrap._2)
+  }
+  test("mix (compiled opt fun)") {
+    go(true, opt._1, opt._2)
+  }
+  test("mix (compiled wrap fun)") {
+    go(true, wrap._1, wrap._2)
   }
 }
