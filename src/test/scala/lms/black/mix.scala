@@ -27,10 +27,10 @@ class TestMix extends TestSuite with BeforeAndAfter {
     ev(s"""
 (define p3
   (let ((f $f))
-    (cons (lambda () (f 2))
-          (lambda ()
+    (cons ($lambda () (f 2))
+          ($lambda ()
             (let ((old_f f))
-              (set! f (lambda (x) (old_f (old_f x)))))))))
+              (set! f ($lambda (x) (old_f (old_f x)))))))))
 """)
     ev("(define t3 (car p3))")
     ev("(define u3 (cdr p3))")
@@ -42,9 +42,9 @@ class TestMix extends TestSuite with BeforeAndAfter {
     assertResult(I(3)){ev("(t3)")}
 
     ev("(u3)")
-    assertResult(I(4)){ev("(t3)")}
+    assertResult(I(if (compile) 3 else 4)){ev("(t3)")}
     ev("(u3)")
-    assertResult(I(6)){ev("(t3)")}
+    assertResult(I(if (compile) 3 else 6)){ev("(t3)")}
   }
 
   val opt = ({f: String => f}, "fs")
