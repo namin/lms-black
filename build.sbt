@@ -28,4 +28,4 @@ scalacOptions += "-feature"
 
 parallelExecution in Test := false
 
-initialCommands in console := "import scala.lms.black._; import repl._; import eval._"
+initialCommands in console := "import scala.lms.black._; import repl._; import eval._; def assertResult(expected: Any)(actual: Any) = assert (expected==actual)"
