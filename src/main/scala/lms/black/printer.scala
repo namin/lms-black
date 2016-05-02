@@ -53,7 +53,8 @@ object printer {
     def inRep = false
   }
 
-  def summarize(f: Evalfun) = {
+  def summarize(f: Value): String = summarize(f.asInstanceOf[Evalfun])
+  def summarize(f: Evalfun): String = {
     id_count = 0
     val fn = funs(f.key).fun[PrintRep]
     val body =
