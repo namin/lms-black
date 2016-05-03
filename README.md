@@ -37,3 +37,8 @@ to be read in conjunction with the code.
    runs the test suite.
 * `sbt console`
    opens a Scala REPL with the system already imported. Then, use `ev` to evaluate Black terms, like in the tests, e.g. `ev("(+ 1 1)")`.
+
+## Code
+
+* __[`eval.scala`](src/main/scala/lms/black/eval.scala)__ defines the stage-polymorphic base interpreter functions and wires the tower.
+* __[`stage.scala`](src/main/scala/lms/black/stage.scala)__ defines the [LMS](https://scala-lms.github.io/tutorials/)-specific instantiation of the stage-polymorphic type class.
