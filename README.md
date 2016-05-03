@@ -43,4 +43,9 @@ to be read in conjunction with the code.
 * __[`eval.scala`](src/main/scala/lms/black/eval.scala)__ defines the stage-polymorphic base interpreter functions and wires the tower.
 * __[`stage.scala`](src/main/scala/lms/black/stage.scala)__ defines the [LMS](https://scala-lms.github.io/tutorials/)-specific instantiation of the stage-polymorphic type class.
 * The [test directory](/src/test/scala/lms/black) contains many examples.
-
+  * __[`instr.scala`](/src/test/scala/lms/black/instr.scala)__ defines a special form to count calls to several meta-level functions.
+  * __[`taba.scala`](/src/test/scala/lms/black/taba.scala)__ defines a special form taba to monitor the stack.
+  * __[`delta.scala`](/src/test/scala/lms/black/delta.scala)__ defines the "classic" delta reifer to go up the tower with a reified structure for the current computation from below, and also `call/cc` in terms of `delta`.
+  * __[`undo.scala`](/src/test/scala/lms/black/undo.scala)__ defines a scheme to undo at the meta-level.
+  * __[`cont.scala`](/src/test/scala/lms/black/cont.scala)__ defines alternative semantics for continuations.
+  * __[`re.scala`](/src/test/scala/lms/black/re.scala)__ defines a string matcher, showing that LMS-Black can also collapse ad-hoc user-level towers.
