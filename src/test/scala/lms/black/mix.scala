@@ -12,10 +12,11 @@ class TestMix extends TestSuite with BeforeAndAfter {
     clean()
   }
 
-  def go(compile: Boolean, mk_fs: String => String, f: String) = {
+  def go(compile: Boolean, mk: String => String, sl: String => String) = {
+    val f = sl("fs")
     val over_opt = compile && (f=="fs")
     val lambda = (if (compile) "c" else "")+"lambda"
-    ev(s"(define fs ${mk_fs(s"($lambda (x) (+ x 1))")})")
+    ev(s"(define fs ${mk(s"($lambda (x) (+ x 1))")})")
     ev(s"(define t1 ($lambda () ($f 2)))")
     assertResult(I(3)){ev("(t1)")}
     ev(s"""
@@ -36,7 +37,7 @@ class TestMix extends TestSuite with BeforeAndAfter {
     ev("(define u3 (cdr p3))")
     assertResult(I(3)){ev("(t3)")}
 
-    ev(s"(set! fs ${mk_fs(s"($lambda (x) (+ x 2))")})")
+    ev(s"(set! fs ${mk(s"($lambda (x) (+ x 2))")})")
     assertResult(I(if (over_opt) 3 else 4)){ev("(t1)")}
     assertResult(I(3)){ev("(t2)")}
     assertResult(I(3)){ev("(t3)")}
@@ -63,8 +64,8 @@ v_3})})})}"""
     }
   }
 
-  val opt = ({f: String => f}, "fs")
-  val wrap = ({f: String => s"(cons $f '())"}, "(car fs)")
+  val opt = ({f: String => f}, {fs: String => fs})
+  val wrap = ({f: String => s"(cons $f '())"}, {fs: String => s"(car $fs)"})
   test("mix (uncompiled opt fun)") {
     go(false, opt._1, opt._2)
   }
