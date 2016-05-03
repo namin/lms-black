@@ -261,7 +261,6 @@ object eval {
       case P(S("lambda"), _) => meta_apply[R](m, S("eval-lambda"), exp, env, cont)
       case P(S("clambda"), _) => meta_apply[R](m, S("eval-clambda"), exp, env, cont)
       case P(S("let"), _) => meta_apply[R](m, S("eval-let"), exp, env, cont)
-      case P(S("cst"), _) => meta_apply[R](m, S("eval-cst"), exp, env, cont)
       case P(S("if"), _) => meta_apply[R](m, S("eval-if"), exp, env, cont)
       case P(S("begin"), body) => meta_apply[R](m, S("eval-begin"), body, env, cont)
       case P(S("set!"), _) => meta_apply[R](m, S("eval-set!"), exp, env, cont)
@@ -383,13 +382,7 @@ object eval {
       apply_cont[R](mcont, eval_let[R](m, exp, env, cont))
     }
   }
-  def eval_cst_fun(m: => MEnv): Fun[NoRep] = new Fun[NoRep] {
-    def fun[R[_]:Ops](implicit ev: Convert[NoRep,R]) = { (vc: Value) =>
-      val P(mcont, P(exp, P(env, P(cont, N)))) = vc
-      apply_cont[R](mcont, eval_let[R](m, exp, env, cont, cst=true))
-    }
-  }
-  def eval_let[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value, cst: Boolean = false): R[Value] = {
+  def eval_let[R[_]:Ops](m: MEnv, exp: Value, env: Value, cont: Value): R[Value] = {
     val o = implicitly[Ops[R]]; import o._
     val (pairs, body) = exp match {
       case P(_, P(pairs, body)) => (pairs, body)
@@ -400,7 +393,7 @@ object eval {
     meta_apply[R](m, S("eval-list"), args, env, _cont(new FunC[R] { def fun[R1[_]:Ops](implicit ev: Convert[R,R1]) = {vs =>
       val o1 = implicitly[Ops[R1]]
       meta_apply[R1](m, S("eval-begin"), body,
-        env_extend[R1](env, params, o1._unlift(vs), cst),
+        env_extend[R1](env, params, o1._unlift(vs)),
         cont)
     }}))
   }
@@ -497,23 +490,23 @@ object eval {
     meta_apply[R](meta_menv, S("base-eval"), e, meta_env, cont)
   }
 
-  def env_extend[R[_]:Ops](env: Value, params: Value, args: Value, cst: Boolean = false) = {
+  def env_extend[R[_]:Ops](env: Value, params: Value, args: Value) = {
     val o = implicitly[Ops[R]]
-    val frame = make_pairs[R](params, args, cst)
+    val frame = make_pairs[R](params, args)
     cons(if (o.inRep) frame else cell_new(frame, "frame"), env)
   }
-  def make_pairs[R[_]:Ops](ks: Value, vs: Value, cst: Boolean): Value = (ks, vs) match {
+  def make_pairs[R[_]:Ops](ks: Value, vs: Value): Value = (ks, vs) match {
     case (N, N) => N
     case (N, Code(_)) => N
     case (S(s), _) =>
       val o = implicitly[Ops[R]]
-      cons(cons(ks, if (cst) vs else o._unlift(o._cell_new(o._lift(vs), s))), N)
+      cons(cons(ks, o._unlift(o._cell_new(o._lift(vs), s))), N)
     case (P(k@S(s), ks), P(v, vs)) =>
       val o = implicitly[Ops[R]]
-      cons(cons(k, if (cst) v else o._unlift(o._cell_new(o._lift(v), s))), make_pairs[R](ks, vs, cst))
+      cons(cons(k, o._unlift(o._cell_new(o._lift(v), s))), make_pairs[R](ks, vs))
     case (P(k@S(s), ks), Code(c : R[Value])) =>
       val o = implicitly[Ops[R]]
-      cons(cons(k, o._unlift(if (cst) o._car(c) else o._cell_new(o._car(c), s))), make_pairs[R](ks, Code(o._cdr(c)), cst))
+      cons(cons(k, o._unlift((o._cell_new(o._car(c), s)))), make_pairs[R](ks, Code(o._cdr(c))))
   }
   def env_get_pair(env: Value, key: Value): Option[Value] = env match {
     case P(f, r) =>
@@ -590,7 +583,6 @@ object eval {
     binding("eval-set!", evalfun(eval_set_bang_fun(m))),
     binding("eval-if", evalfun(eval_if_fun(m))),
     binding("eval-let", evalfun(eval_let_fun(m))),
-    binding("eval-cst", evalfun(eval_cst_fun(m))),
     binding("eval-clambda", evalfun(eval_clambda_fun(m))),
     binding("eval-lambda", evalfun(eval_lambda_fun(m))),
     binding("eval-application", evalfun(eval_application_fun(m))),
