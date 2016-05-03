@@ -28,9 +28,6 @@ Running this compiled `fib` function has the same behavior as an uncompiled
 the modifications to the interpreter, the previously compiled `fib` function
 will still update the counter.
 
-More information in the _LMS-Black Design Document ([PDF](http://lampwww.epfl.ch/~amin/doc/lms-black.pdf))_,
-to be read in conjunction with the code.
-
 ## Running
 
 * `sbt test`
@@ -49,3 +46,8 @@ to be read in conjunction with the code.
   * __[`undo.scala`](/src/test/scala/lms/black/undo.scala)__ defines a scheme to undo at the meta-level.
   * __[`cont.scala`](/src/test/scala/lms/black/cont.scala)__ defines alternative semantics for continuations.
   * __[`re.scala`](/src/test/scala/lms/black/re.scala)__ defines a string matcher, showing that LMS-Black can also collapse ad-hoc user-level towers.
+
+## Further Reading
+
+More information in the _LMS-Black Design Document ([PDF](http://lampwww.epfl.ch/~amin/doc/lms-black.pdf))_,
+to be read in conjunction with the code.
