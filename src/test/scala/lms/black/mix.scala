@@ -78,4 +78,14 @@ v_3})})})}"""
   test("mix (compiled wrap fun)") {
     go(true, wrap._1, wrap._2)
   }
+
+  test("let and cst") {
+    val or = "{(k, xs) =>_app(k, `(3), _cont{v_1 =>v_1})}"
+    def pev(e: String) = printer.summarize(ev(e)).replace("\n", "")
+    val o1 = "(let ((f (clambda (x) (+ x 1)))) (clambda () (f 2)))"
+    val n2 = "(let ((fa (cons (clambda (x) (+ x 1)) 2))) (clambda () ((car fa) (cdr fa))))"
+    val o2 = "(cst ((fa (cons (clambda (x) (+ x 1)) 2))) (clambda () ((car fa) (cdr fa))))"
+    for (o <- List(o1, o2, n2)) assertResult(I(3)){ev(s"($o)")}
+    for (o <- List(o1, o2)) assertResult(or){pev(o)}
+  }
 }
