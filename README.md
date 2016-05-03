@@ -28,6 +28,9 @@ Running this compiled `fib` function has the same behavior as an uncompiled
 the modifications to the interpreter, the previously compiled `fib` function
 will still update the counter.
 
+More information in the _LMS-Black Design Document ([PDF](http://lampwww.epfl.ch/~amin/doc/lms-black.pdf))_,
+to be read in conjunction with the code.
+
 ## Running
 
 * `sbt test`
