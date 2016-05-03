@@ -42,3 +42,5 @@ to be read in conjunction with the code.
 
 * __[`eval.scala`](src/main/scala/lms/black/eval.scala)__ defines the stage-polymorphic base interpreter functions and wires the tower.
 * __[`stage.scala`](src/main/scala/lms/black/stage.scala)__ defines the [LMS](https://scala-lms.github.io/tutorials/)-specific instantiation of the stage-polymorphic type class.
+* The [test directory](/src/test/scala/lms/black) contains many examples.
+
