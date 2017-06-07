@@ -29,3 +29,10 @@ scalacOptions += "-feature"
 parallelExecution in Test := false
 
 initialCommands in console := "import scala.lms.black._; import repl._; import eval._; def assertResult(expected: Any)(actual: Any) = assert (expected==actual)"
+
+resolvers += "Sonatype OSS Snapshots" at
+  "https://oss.sonatype.org/content/repositories/snapshots"
+
+libraryDependencies += "com.storm-enroute" %% "scalameter" % "0.8.2"
+
+logBuffered := false

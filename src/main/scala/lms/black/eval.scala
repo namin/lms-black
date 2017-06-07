@@ -4,6 +4,8 @@ import language.higherKinds
 import language.implicitConversions
 
 object eval {
+  var verbose = true
+
   sealed trait Value
   case object Undefined extends Value
   case class I(n: Int) extends Value
@@ -367,7 +369,8 @@ object eval {
           eval_body[Rep](kv)(OpsRep)
       }
       val r = new EvalDslDriver with Program
-      r.precompile
+      r.dumpGeneratedCode = verbose
+      if (verbose) r.precompile else r.precompileSilently
       _lift(evalfun(r.f))
     } else {
       _fun(new Fun[R] { def fun[RF[_]:Ops](implicit ev0: Convert[R,RF]) = { ((kv0: R[Value]) => { val kv = ev0.convert(kv0)
