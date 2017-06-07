@@ -557,6 +557,7 @@ object eval {
     case ("<", P(I(a), P(I(b), N))) => B(a < b)
     case ("+", P(I(a), P(I(b), N))) => I(a+b)
     case ("-", P(I(a), P(I(b), N))) => I(a-b)
+    case ("*", P(I(a), P(I(b), N))) => I(a*b)
     case ("car", P(v, N)) => car(v)
     case ("cdr", P(v, N)) => cdr(v)
     case ("cons", P(a, P(d, N))) => cons(a, d)
@@ -577,6 +578,7 @@ object eval {
     P(S("<"), Prim("<")),
     P(S("+"), Prim("+")),
     P(S("-"), Prim("-")),
+    P(S("*"), Prim("*")),
     P(S("car"), Prim("car")),
     P(S("cdr"), Prim("cdr")),
     P(S("cons"), Prim("cons")),
