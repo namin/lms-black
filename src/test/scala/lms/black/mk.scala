@@ -131,5 +131,10 @@ class TestMicroKanren extends TestSuite with BeforeAndAfter {
     ev(mk.replace("lambda", "clambda"))
     assertResult("((((var 0) . 5)) . 1)")(show(ev(
       "(let ((p ((call/fresh (clambda (q) (== q 5))) empty-state))) (car p))")))
+
+    val p = ev("(clambda () ((call/fresh (clambda (q) (== q 5))) empty-state)))").
+      asInstanceOf[Evalfun]
+    // not interesting, because cell reads block optimizations
+    println(printer.summarize(p))
   }
 }
