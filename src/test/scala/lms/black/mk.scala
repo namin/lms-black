@@ -43,13 +43,8 @@ class TestMicroKanren extends TestSuite with BeforeAndAfter {
 
 (define ext-s (lambda (x v s) (cons (cons x v) s)))
 
-(define == (lambda (u v)
-  (lambda (s/c)
-    (let ((s (unify u v (car s/c))))
-      (if (not (null? s)) (unit (cons s (cdr s/c))) mzero)))))
-
-(define unit (lambda (s/c) (cons s/c mzero)))
 (define mzero '())
+(define unit (lambda (s/c) (cons s/c mzero)))
 
 (define unify (lambda (u v s)
   (let ((u (walk u s)) (v (walk v s)))
@@ -59,25 +54,29 @@ class TestMicroKanren extends TestSuite with BeforeAndAfter {
     (if (and (pair? u) (pair? v))
        (let ((s (unify (car u) (car v) s)))
          (and s (unify (cdr u) (cdr v) s)))
-    (if (eqv? u v) s '()))))))))
+    (if (eq? u v) s '()))))))))
+
+(define == (lambda (u v)
+  (lambda (s/c)
+    (let ((s (unify u v (car s/c))))
+      (if (not (null? s)) (unit (cons s (cdr s/c))) mzero)))))
 
 (define call/fresh (lambda (f)
   (lambda (s/c)
     (let ((c (cdr s/c)))
       ((f (var c)) (cons (car s/c) (+ c 1)))))))
 
-(define disj (lambda (g1 g2) (lambda (s/c) (mplus (g1 s/c) (g2 s/c)))))
-(define conj (lambda (g1 g2) (lambda (s/c) (bind (g1 s/c) g2))))
-
 (define mplus (lambda ($1 $2)
   (if (null? $1) $2
   (if (pair? $1) (cons (car $1) (mplus (cdr $1) $2))
   (lambda () (mplus $2 ($1)))))))
-
 (define bind (lambda ($ g)
   (if (null? $) mzero
   (if (pair? $) (mplus (g (car $)) (bind (cdr $) g))
   (lambda () (bind ($) g))))))
+
+(define disj (lambda (g1 g2) (lambda (s/c) (mplus (g1 s/c) (g2 s/c)))))
+(define conj (lambda (g1 g2) (lambda (s/c) (bind (g1 s/c) g2))))
 
 (define empty-state (cons '() 0))
 
@@ -128,5 +127,9 @@ class TestMicroKanren extends TestSuite with BeforeAndAfter {
     assertResult("()")(show(ev(
       "(let ((p (a-and-b empty-state))) (cdr (cdr p)))")))
   }
-
+  test("compiled 1") {
+    ev(mk.replace("lambda", "clambda"))
+    assertResult("((((var 0) . 5)) . 1)")(show(ev(
+      "(let ((p ((call/fresh (clambda (q) (== q 5))) empty-state))) (car p))")))
+  }
 }
