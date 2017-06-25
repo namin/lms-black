@@ -11,7 +11,12 @@ object Bench {
         thunk
       }
     }
-    time
+    if (n < 100000) {
+      val r = 100000/n
+      Quantity(r*time.value, time.units)
+    } else {
+      time
+    }
   }
 
   def benchFac() = {
@@ -20,7 +25,7 @@ object Bench {
       val e = parse(s"(fac $i)")
       clean()
       ev("(define fac (lambda (n) (if (eq? n 0) 1 (* n (fac (- n 1))))))")
-      val t1 = bench(evl(e), n=1000).toString.replace(".", "00.")
+      val t1 = bench(evl(e), n=1000)
       ev("(set! fac (clambda (n) (if (eq? n 0) 1 (* n (fac (- n 1))))))")
       val t2 = bench(evl(e))
       clean()
@@ -30,7 +35,7 @@ object Bench {
         (if (eq? e 'n) (set! counter (+ counter 1)) 0)
         (old-eval-var e r k))))""")
       ev("(define fac (lambda (n) (if (eq? n 0) 1 (* n (fac (- n 1))))))")
-      val t3 = bench(evl(e), n=1000).toString.replace(".", "00.")
+      val t3 = bench(evl(e), n=1000)
       ev("(set! fac (clambda (n) (if (eq? n 0) 1 (* n (fac (- n 1))))))")
       val t4 = bench(evl(e))
       println(s"$i,$t1,$t2,$t3,$t4")
