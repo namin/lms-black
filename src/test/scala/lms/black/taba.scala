@@ -146,6 +146,9 @@ class TestTaba extends TestSuite with BeforeAndAfter {
 )"""
 
   def fields_ex = "(taba (fields word) (fields '(0 1 2 0 3 4 5 0 6)))"
+
+  // NOTE: This might be clearer if we showed the trace without grouping per function name.
+  //       Still the trace is helpful to understand what each function is responsible for.
   def fields_ex_res = """(((1 2) (3 4 5) (6))
 ((fields ((0 1 2 0 3 4 5 0 6)) ((1 2) (3 4 5) (6)))
 (fields ((1 2 0 3 4 5 0 6)) ((1 2) (3 4 5) (6)))
