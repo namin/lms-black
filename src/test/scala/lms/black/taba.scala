@@ -5,6 +5,10 @@ import repl._
 
 import org.scalatest.BeforeAndAfter
 
+// There and Back Again
+// http://www.brics.dk/RS/01/39/BRICS-RS-01-39.pdf
+// http://www.brics.dk/RS/05/3/BRICS-RS-05-3.pdf
+
 class TestTaba extends TestSuite with BeforeAndAfter {
   val under = "taba_"
 
@@ -125,7 +129,7 @@ class TestTaba extends TestSuite with BeforeAndAfter {
 
   // translated from
   // section 2.3 A direct-style solution
-  // of www.brics.dk/RS/01/39/BRICS-RS-01-39.pdf
+  // of http://www.brics.dk/RS/01/39/BRICS-RS-01-39.pdf
   def fields = """(begin
 (define fields 'TODO)
 (define word 'TODO)
