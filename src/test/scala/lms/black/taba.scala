@@ -133,4 +133,59 @@ class TestTaba extends TestSuite with BeforeAndAfter {
       show(ev(s"(taba (cnv walk) (let () ${cnv.replace("lambda", "clambda")} (cnv '(1 2 3) '(a b c))))"))
     }
   }
+
+  // translated from
+  // section 2.3 A direct-style solution
+  // of www.brics.dk/RS/01/39/BRICS-RS-01-39.pdf
+  def fields = """(begin
+(define fields 'TODO)
+(define word 'TODO)
+(set! fields (lambda (xs)
+  (if (null? xs) '()
+  (if (eq? 0 (car xs)) (fields (cdr xs))
+  (let ((ws (word (cdr xs))))
+    (cons (cons (car xs) (car ws)) (fields (cdr ws))))))))
+(set! word (lambda (xs)
+  (if (null? xs) (cons '() '())
+  (if (eq? 0 (car xs)) (cons '() (cdr xs))
+  (let ((ws (word (cdr xs))))
+    (cons (cons (car xs) (car ws)) (cdr ws)))))))
+)"""
+
+  def fields_ex = "(taba (fields word) (fields '(0 1 2 0 3 4 5 0 6)))"
+  def fields_ex_res = """(((1 2) (3 4 5) (6))
+((fields ((0 1 2 0 3 4 5 0 6)) ((1 2) (3 4 5) (6)))
+(fields ((1 2 0 3 4 5 0 6)) ((1 2) (3 4 5) (6)))
+(fields ((3 4 5 0 6)) ((3 4 5) (6)))
+(fields ((6)) ((6)))
+(fields (()) ())
+(word (()) (()))
+(word ((4 5 0 6)) ((4 5) 6))
+(word ((5 0 6)) ((5) 6))
+(word ((0 6)) (() 6))
+(word ((2 0 3 4 5 0 6)) ((2) 3 4 5 0 6))
+(word ((0 3 4 5 0 6)) (() 3 4 5 0 6))))""".replace("\n", " ")
+
+  test("TABA fields") {
+    ev(s"(EM $add_app_hook)")
+    ev(s"(EM $taba)")
+    ev(fields)
+    assertResult{fields_ex_res}{show(ev(fields_ex))}
+  }
+
+  test("TABA fields (meta-compiled)") {
+    ev(s"(EM $add_app_hook)".replace("lambda", "clambda"))
+    ev(s"(EM $taba)".replace("lambda", "clambda"))
+    ev(fields)
+    assertResult{fields_ex_res}{show(ev(fields_ex))}
+  }
+
+  test("TABA fields (all compiled)") {
+    ev(s"(EM $add_app_hook)".replace("lambda", "clambda"))
+    ev(s"(EM $taba)".replace("lambda", "clambda"))
+    assertResult{fields_ex_res}{
+      show(ev(s"(taba (fields word) (let () ${fields.replace("lambda", "clambda")} (fields '(0 1 2 0 3 4 5 0 6))))"))
+    }
+  }
+
 }
