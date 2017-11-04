@@ -20,9 +20,13 @@ class TestDelta extends TestSuite with BeforeAndAfter {
       (if (eq? '_env e) (k r) (old-eval-var e r k))))
 )"""
 
-  def delta = """(begin
+  def list = """
 (define list
   (lambda args args))
+"""
+
+  def delta = s"""(begin
+$list
 
 (define old-eval-application eval-application)
 
@@ -44,13 +48,16 @@ class TestDelta extends TestSuite with BeforeAndAfter {
   (lambda (env params args)
       (cons (make-pairs params args) env)))
 
+(define lookup
+  (lambda (r e) (eval-var e r (lambda (x) x))))
+
 (define apply-delta
   (lambda (e r k)
     (let ((operator (car e))
           (operand (cdr e)))
       (let ((delta-params (car (cdr operator)))
             (delta-body (cdr (cdr operator))))
-        (eval-begin
+        ((EM eval-begin)
          delta-body
          (extend _env delta-params (list operand r k))
          id-cont)))))
@@ -71,14 +78,19 @@ class TestDelta extends TestSuite with BeforeAndAfter {
               (k ((meaning 'f r (lambda (v) v)) k))))))
 )"""
 
-  def all = s"""(begin
+  def em_delta = s"""(begin
 (EM (EM $reify_env))
 (EM $delta)
+)"""
+
+  def all = s"""(begin
+$em_delta
 $call_cc
 )"""
 
+  def cev(s: String) = ev(s.replace("(lambda", "(clambda"))
+
   def go(c: Boolean) = {
-    def cev(s: String) = ev(s.replace("(lambda", "(clambda"))
     def assertEv(v: Value)(s: String) = {
       assertResult(v){ev(s)}
       assertResult(v){cev(s)}
@@ -96,5 +108,44 @@ $call_cc
 
   test("delta (all-compiled)") {
     go(true)
+  }
+
+
+  // inspired by Blond permute! but more mundane...
+  // just a hard-coding an observation of a local tower,
+  // where meta and meta-meta are swapped
+  // note that EM would still just rigidly follow the original meta-environment chains
+  // of course, eval-EM could be redefined...
+  def permute = s"""
+(define permute (lambda ()
+  ((delta (e0 r0 k0)
+    ((delta (e1 r1 k1)
+      ((delta (e2 r2 k2)
+        (let ((R2 (extend r2 '(R0 K0) (list
+                    (lookup (lookup r2 'r1) 'r0)
+                    (lookup (lookup r2 'r1) 'k0))))
+              (K2 k2))
+        (let ((R1 (extend (lookup r2 'r1) '(R2 K2) (list R2 K2)))
+              (K1 (lookup r2 'k1)))
+        (meaning '(cons (meaning '(cons (meaning 'level R0 K0) level) R2 K2) level) R1 K1)
+))))))))))
+"""
+
+  def all_permute = s"""(begin
+$list
+$em_delta
+(EM $em_delta)
+(EM (EM $em_delta))
+$permute
+(define level 'user)
+(EM (define level 'meta))
+(EM (EM (define level 'meta-meta)))
+(permute)
+)"""
+
+  test("permute") {
+    val result = P(P(S("user"),S("meta-meta")),S("meta"))
+    assertResult{result}{ev(all_permute)}
+    // assertResult{result}{cev(all_permute)} // TODO: generated code doesn't compile due to unbound variable...
   }
 }
