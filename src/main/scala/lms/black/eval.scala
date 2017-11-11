@@ -344,7 +344,7 @@ object eval {
     }
   }
 
-  def unlift_cont[R[_]:Ops](k: => R[Value]): Value = {
+  def unwrap_cont[R[_]:Ops](k: => R[Value]): Value = {
     val o = implicitly[Ops[R]]
     o._cont(new FunC[R] {def fun[R1[_]:Ops](implicit ev: Convert[R,R1]) = { v =>
       apply_lifted_cont[R1](ev.convert(k), v)
@@ -361,7 +361,7 @@ object eval {
       lazy val k = or._car(kv)
       meta_apply[RF](m, S("eval-begin"), body,
         env_extend[RF](env, params, Code(args)),
-        unlift_cont[RF](k))
+        unwrap_cont[RF](k))
     }
     val f = if (!inRep) {
       trait Program extends EvalDsl {
