@@ -1,4 +1,4 @@
-# LMS Black #
+# LMS Black aka Purple #
 
 In a reflective programming language such as
 [Black](https://github.com/readevalprintlove/black), user programs are
@@ -49,5 +49,5 @@ will still update the counter.
 
 ## Further Reading
 
-More information in the _LMS-Black Design Document ([PDF](http://lampwww.epfl.ch/~amin/doc/lms-black.pdf))_,
-to be read in conjunction with the code.
+* Our POPL 2018 paper, _Collapsing Towers of Interpreters ([PDF](http://lampwww.epfl.ch/~amin/pub/collapsing-towers.pdf))_.
+* Some older _LMS-Black Design Document ([PDF](http://lampwww.epfl.ch/~amin/doc/lms-black.pdf))_ to be read in conjunction with this code.
