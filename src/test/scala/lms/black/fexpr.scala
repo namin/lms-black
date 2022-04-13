@@ -25,6 +25,10 @@ class TestFexpr extends TestSuite with BeforeAndAfter {
              (eval-list (cdr exp) env (lambda (l) (base-apply (cons op l) env cont)))))))))
 )"""
 
+  def top_eval = """
+(define eval (lambda (exp) ((EM base-eval) exp '() (lambda (x) x))))
+"""
+
   test("fexpr: vanilla add") {
     ev(fexpr)
     assertResult(I(3)){ev("(+ 1 2)")}
@@ -44,5 +48,17 @@ class TestFexpr extends TestSuite with BeforeAndAfter {
     ev(fexpr)
     ev("(define id-fexpr (fexpr (x) x))")
     assertResult(P(S("+"), P(I(1), P(I(2), N)))){ev("(id-fexpr (+ 1 2))")}
+  }
+
+  test("fexpr apply/eval") {
+    ev(fexpr)
+    ev(top_eval)
+    assertResult(I(1)){ev("((fexpr (x) (eval x)) 1)")}
+  }
+
+  test("fexpr apply/eval if") {
+    ev(fexpr)
+    ev(top_eval)
+    assertResult(I(1)){ev("((fexpr (c a b) (if (eval c) (eval a) (eval b))) #t 1 bad)")}
   }
 }
