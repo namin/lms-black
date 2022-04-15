@@ -25,6 +25,8 @@ class TestFexpr extends TestSuite with BeforeAndAfter {
              (eval-list (cdr exp) env (lambda (l) (base-apply (cons op l) env cont)))))))))
 )"""
 
+  def fexpr_compiled = fexpr.replace("'lambda", "'clambda").replace("(lambda", "(clambda")
+
   def top_eval = """(begin
 (EM (begin
 (define old-eval-var eval-var)
@@ -74,4 +76,20 @@ class TestFexpr extends TestSuite with BeforeAndAfter {
     ev(top_eval)
     assertResult(I(1)){ev("((fexpr (c a b) (if (eval c) (eval a) (eval b))) #t 1 bad)")}
   }
+
+  test("fexpr arg") {
+    ev(fexpr)
+    assertResult(P(S("+"), P(I(1), P(I(2), N)))){ev("((lambda (f) (f (+ 1 2))) (fexpr (x) x))")}
+  }
+
+  test("fexpr arg compiled") {
+    ev(fexpr)
+    assertResult(P(S("+"), P(I(1), P(I(2), N)))){ev("((clambda (f) (f (+ 1 2))) (fexpr (x) x))")}
+  }
+
+  test("fexpr arg full compiled") {
+    ev(fexpr_compiled)
+    assertResult(P(S("+"), P(I(1), P(I(2), N)))){ev("((clambda (f) (f (+ 1 2))) (fexpr (x) x))")}
+  }
+
 }
